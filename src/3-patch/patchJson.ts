@@ -44,12 +44,21 @@ function applyMovesWithIndexTracking(
     const key = hasSmartKey ? move.item.slice(1) : move.key;
 
     if (key) {
+      // Smart key: buscar objeto no base array e aplicar patch
       const patch = diff[key] ?? {};
       const existing = base.find((i) => resolveKey(i) === key);
       itemToAdd = patchJson(existing || {}, patch);
 
       if (!("key" in itemToAdd) && !("id" in itemToAdd)) {
         itemToAdd.key = key;
+      }
+    } else if (typeof move.item === "string" && move.item.startsWith("{")) {
+      // String JSON serializada (objeto sem smart key) → deserializar
+      try {
+        itemToAdd = JSON.parse(move.item);
+      } catch (e) {
+        // Se falhar parse, manter string (fallback seguro)
+        itemToAdd = move.item;
       }
     }
 

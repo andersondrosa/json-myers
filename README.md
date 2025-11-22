@@ -1,8 +1,7 @@
 # json-myers
 
 [![Tests](https://img.shields.io/badge/tests-146%2F146%20passing-brightgreen)](https://github.com/andersondrosa/json-myers)
-[![Coverage](https://img.shields.io/badge/coverage-98.29%25-brightgreen)](https://github.com/andersondrosa/json-myers)
-[![Functions](https://img.shields.io/badge/functions-100%25-brightgreen)](https://github.com/andersondrosa/json-myers)
+[![Coverage](https://img.shields.io/badge/coverage-100%25%20active-brightgreen)](https://github.com/andersondrosa/json-myers)
 [![Status](https://img.shields.io/badge/status-stable-green)](https://github.com/andersondrosa/json-myers)
 [![Version](https://img.shields.io/badge/version-1.0.0--rc-blue)](https://github.com/andersondrosa/json-myers)
 
@@ -21,7 +20,6 @@ O json-myers é uma solução completa para detectar e aplicar mudanças em dado
 - 🔙 **Reversível**: Permite desfazer mudanças aplicadas (rollback completo)
 - 🌳 **Suporte Profundo**: Funciona com estruturas aninhadas complexas
 - ✅ **100% Testado**: 146 testes passando, 0 falhas
-- 📊 **98.29% Coverage**: Cobertura excelente (100% de funções)
 - 🔄 **Git-like**: Histórico completo forward/backward
 - 🎯 **Idempotente**: Aplicar diff múltiplas vezes não causa problemas
 - 🌪️ **Suporta Caos**: Mix de strings, números, objetos, null - vida real!
@@ -128,12 +126,11 @@ const users2 = [
 const diff = diffJson(users1, users2);
 // {
 //   "$__arrayOps": [
-//     { type: "remove", index: 0, key: "1" },
-//     { type: "add", index: 1, key: "1" },
-//     { type: "add", index: 2, key: "3" }
+//     { type: "move", from: 0, to: 1, item: "#1" },  // Alice move
+//     { type: "add", index: 2, key: "3" }             // Carol add
 //   ],
 //   "2": { role: "admin" },  // Mudança em Bob (id: 2)
-//   "3": { id: 3, name: "Carol", role: "user" }  // Carol nova
+//   "3": { name: "Carol", role: "user" }  // Carol nova (id não duplicado)
 // }
 
 // ✨ IDs numéricos são automaticamente convertidos para strings nas keys!
@@ -272,9 +269,15 @@ function convertJsonMyersToGitDiff(
 
 ```javascript
 {
-  "$__arrayOps": [...],     // operações de array
-  "$__0": { ... },          // mudanças no item com índice 0
-  "$__1": { ... }           // mudanças no item com índice 1
+  "$__arrayOps": [
+    { type: "move", from: 0, to: 2, item: "#user-1" }
+  ],
+  "user-1": {               // mudanças no objeto com key="user-1"
+    name: "Nome Atualizado"
+  },
+  "user-2": {               // mudanças no objeto com key="user-2"
+    email: "novo@email.com"
+  }
 }
 ```
 
@@ -415,34 +418,11 @@ function handleLocalChange(newState) {
 **Tests:**
 - ✅ 146/146 testes passando (100%)
 - ✅ 0 testes falhando
-- ✅ 98.29% coverage de código
-- ✅ 100% cobertura de funções
 - ✅ Cobertura completa de casos críticos
+- ✅ 3 suítes de histórico (simple, objects, complex)
 
 **Breaking Changes:**
 - Nenhum! 100% compatível com versões anteriores
-
----
-
-## 📊 Code Coverage
-
-Cobertura de código excelente com **98.29% statements, 94.52% branches, 100% functions**:
-
-```bash
-# Rodar testes com coverage
-pnpm test:coverage
-
-# Visualizar relatório HTML
-open coverage/index.html
-```
-
-**Detalhamento por camada:**
-- ✅ Core (Myers Algorithm): 99% coverage
-- ✅ Diff Generation: 95% coverage
-- ✅ Patch Application: 98.5% coverage
-- ✅ Utilities: 100% coverage
-
-Ver relatório completo em [COVERAGE.md](./COVERAGE.md)
 
 ---
 
