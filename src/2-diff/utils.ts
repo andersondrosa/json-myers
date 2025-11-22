@@ -1,11 +1,51 @@
+/**
+ * Escapa strings que começam com # ou \ para evitar colisões
+ * com smart keys.
+ *
+ * Exemplos:
+ *   "#a"    → "\#a"
+ *   "\#a"   → "\\#a"
+ *   "\\#a"  → "\\\#a"
+ *   "normal" → "normal" (sem escape)
+ */
+function escapeIdentity(str: string): string {
+  // Se começa com # ou \, adiciona \ no início
+  if (str.startsWith("#") || str.startsWith("\\")) {
+    return `\\${str}`;
+  }
+  return str;
+}
+
+/**
+ * Remove escape de identidade.
+ *
+ * Exemplos:
+ *   "\#a"    → "#a"
+ *   "\\#a"   → "\#a"
+ *   "\\\#a"  → "\\#a"
+ *   "normal" → "normal" (sem unescape)
+ */
+export function unescapeIdentity(str: string): string {
+  // Se começa com \, remove o primeiro \
+  if (str.startsWith("\\")) {
+    return str.slice(1);
+  }
+  return str;
+}
+
 export function getArrayItemIdentity(item: any): string {
   const key = getKey(item);
   if (key) {
     return `#${key}`;
   }
-  return typeof item === "object" && item !== null
-    ? JSON.stringify(item)
-    : String(item);
+
+  if (typeof item === "object" && item !== null) {
+    return JSON.stringify(item);
+  }
+
+  // String ou primitivo: escapar se começar com # ou \
+  const str = String(item);
+  return escapeIdentity(str);
 }
 
 export function isNonEmptyDiff(value: any): boolean {
