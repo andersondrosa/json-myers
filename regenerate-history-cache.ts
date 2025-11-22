@@ -1,4 +1,4 @@
-import { diffJson } from './src/diff/diffJson';
+import { diffJson } from './src';
 import fs from 'fs';
 import path from 'path';
 

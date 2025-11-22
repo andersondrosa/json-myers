@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diffJson } from "../../src/2-diff/diffJson";
-import { patchJson } from "../../src/3-patch/patchJson";
+import { diffJson, patchJson } from "../../src";
 
 /**
  * Teste de histórico simplificado com arrays de strings (keys)
@@ -36,7 +35,6 @@ describe("History Simple: Array de Strings (Git-like)", () => {
   it("deve gerar diffs entre todos os steps (como git diff)", () => {
     const diffs: any[] = [];
 
-    console.log("\n=== GERANDO DIFFS (Git-like) ===\n");
 
     // Gerar diff entre cada step
     for (let i = 0; i < 7; i++) {
@@ -46,26 +44,18 @@ describe("History Simple: Array de Strings (Git-like)", () => {
       const diff = diffJson(current, next);
       diffs.push(diff);
 
-      console.log(`📝 Diff ${i} → ${i + 1}:`);
-      console.log(`   From: [${current.join(", ")}]`);
-      console.log(`   To:   [${next.join(", ")}]`);
-      console.log(`   Ops:  ${JSON.stringify(diff.$__arrayOps || [])}\n`);
     }
 
     expect(diffs.length).toBe(7);
 
     // Salvar diffs para inspeção
-    console.log("\n=== DIFFS GERADOS ===");
     diffs.forEach((diff, idx) => {
-      console.log(`\nDiff ${idx}:`, JSON.stringify(diff, null, 2));
     });
   });
 
   it("deve aplicar diffs sequencialmente (avançar histórico)", () => {
     let currentState = [...history.step0];
 
-    console.log("\n=== APLICANDO DIFFS (Forward) ===\n");
-    console.log(`Step 0: [${currentState.join(", ")}]`);
 
     // Aplicar cada diff
     for (let i = 0; i < 7; i++) {
@@ -75,7 +65,6 @@ describe("History Simple: Array de Strings (Git-like)", () => {
       const diff = diffJson(from, to);
       currentState = patchJson(currentState, diff);
 
-      console.log(`Step ${i + 1}: [${currentState.join(", ")}]`);
 
       // Verificar se chegou no estado esperado
       expect(currentState).toEqual(to);
@@ -92,7 +81,6 @@ describe("History Simple: Array de Strings (Git-like)", () => {
     // Gerar diffs reversos
     const reverseDiffs: any[] = [];
 
-    console.log("\n=== GERANDO REVERSE DIFFS ===\n");
 
     for (let i = 7; i > 0; i--) {
       const from = history[`step${i}` as keyof typeof history];
@@ -101,13 +89,8 @@ describe("History Simple: Array de Strings (Git-like)", () => {
       const reverseDiff = diffJson(from, to);
       reverseDiffs.push(reverseDiff);
 
-      console.log(`🔄 Reverse diff ${i} → ${i - 1}:`);
-      console.log(`   From: [${from.join(", ")}]`);
-      console.log(`   To:   [${to.join(", ")}]`);
     }
 
-    console.log("\n=== APLICANDO ROLLBACK ===\n");
-    console.log(`Start: [${currentState.join(", ")}]`);
 
     // Aplicar reverse diffs
     for (let i = 0; i < 7; i++) {
@@ -116,7 +99,6 @@ describe("History Simple: Array de Strings (Git-like)", () => {
 
       currentState = patchJson(currentState, reverseDiffs[i]);
 
-      console.log(`Step ${expectedStep}: [${currentState.join(", ")}]`);
 
       // Verificar se voltou ao estado correto
       expect(currentState).toEqual(expected);
@@ -130,8 +112,6 @@ describe("History Simple: Array de Strings (Git-like)", () => {
     const original = [...history.step0];
     let state = [...original];
 
-    console.log("\n=== ROUND-TRIP TEST ===\n");
-    console.log(`Original: [${original.join(", ")}]\n`);
 
     // FORWARD: Aplicar todos os diffs
     const forwardDiffs: any[] = [];
@@ -146,7 +126,6 @@ describe("History Simple: Array de Strings (Git-like)", () => {
       state = patchJson(state, diff);
     }
 
-    console.log(`After forward: [${state.join(", ")}]`);
     expect(state).toEqual(history.step7);
 
     // BACKWARD: Reverter todos os diffs
@@ -158,10 +137,8 @@ describe("History Simple: Array de Strings (Git-like)", () => {
       state = patchJson(state, reverseDiff);
     }
 
-    console.log(`After backward: [${state.join(", ")}]`);
     expect(state).toEqual(original);
 
-    console.log("\n✅ Round-trip successful!");
   });
 
   it("deve preservar idempotência: aplicar diff duas vezes", () => {
@@ -177,11 +154,6 @@ describe("History Simple: Array de Strings (Git-like)", () => {
     // Aplicar diff novamente no resultado (não deve mudar)
     const result2 = patchJson(result1, diff);
 
-    console.log("\n=== IDEMPOTÊNCIA ===");
-    console.log(`From:     [${from.join(", ")}]`);
-    console.log(`To:       [${to.join(", ")}]`);
-    console.log(`Result 1: [${result1.join(", ")}]`);
-    console.log(`Result 2: [${result2.join(", ")}]`);
 
     // Segundo apply não deve mudar nada (já está no estado final)
     // Nota: Pode adicionar items duplicados se não for idempotente
@@ -195,10 +167,6 @@ describe("History Simple: Array de Strings (Git-like)", () => {
 
     const diff = diffJson(from, to);
 
-    console.log("\n=== MOVE DETECTION ===");
-    console.log(`From: [${from.join(", ")}]`);
-    console.log(`To:   [${to.join(", ")}]`);
-    console.log(`Diff:`, JSON.stringify(diff, null, 2));
 
     // Deve ter detectado como move, não como remove+add
     const ops = diff.$__arrayOps || [];
@@ -206,9 +174,6 @@ describe("History Simple: Array de Strings (Git-like)", () => {
     const removes = ops.filter((op: any) => op.type === "remove");
     const adds = ops.filter((op: any) => op.type === "add");
 
-    console.log(`\nMoves: ${moves.length}`);
-    console.log(`Removes: ${removes.length}`);
-    console.log(`Adds: ${adds.length}`);
 
     // Como apenas houve troca, deve ter moves
     expect(moves.length).toBeGreaterThan(0);
@@ -223,20 +188,6 @@ describe("History Simple: Array de Strings (Git-like)", () => {
 
     // step6 → step7: move múltiplos items
     const diff67 = diffJson(history.step6, history.step7);
-
-    console.log("\n=== OPERAÇÕES MÚLTIPLAS ===");
-    console.log(
-      "\nDiff 4→5 (adds):",
-      JSON.stringify(diff45.$__arrayOps, null, 2),
-    );
-    console.log(
-      "\nDiff 5→6 (remove):",
-      JSON.stringify(diff56.$__arrayOps, null, 2),
-    );
-    console.log(
-      "\nDiff 6→7 (moves):",
-      JSON.stringify(diff67.$__arrayOps, null, 2),
-    );
 
     // Aplicar sequencialmente
     let state = [...history.step4];

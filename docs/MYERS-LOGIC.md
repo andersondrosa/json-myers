@@ -291,7 +291,7 @@ if (x === prevX) {
 
 ### 1. Myers está Correto Agora ✅
 
-O algoritmo core em `src/1-core/myersDiff.ts` está gerando os índices corretos!
+O algoritmo core em `src.ts` está gerando os índices corretos!
 
 ### 2. Aplicação Precisa Ser Ajustada ⚠️
 

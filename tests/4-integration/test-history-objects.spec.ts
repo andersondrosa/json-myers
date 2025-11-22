@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diffJson } from "../../src/2-diff/diffJson";
-import { patchJson } from "../../src/3-patch/patchJson";
+import { diffJson, patchJson } from "../../src";
 
 /**
  * Teste de histórico com arrays de OBJETOS (keys)
@@ -99,7 +98,6 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
   it("deve gerar diffs entre todos os steps (objetos completos)", () => {
     const diffs: any[] = [];
 
-    console.log("\n=== GERANDO DIFFS (Objetos com Keys) ===\n");
 
     for (let i = 0; i < 7; i++) {
       const current = history[`step${i}` as keyof typeof history];
@@ -108,17 +106,11 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
       const diff = diffJson(current, next);
       diffs.push(diff);
 
-      console.log(`📝 Diff ${i} → ${i + 1}:`);
-      console.log(`   Keys From: [${current.map((x) => x.key).join(", ")}]`);
-      console.log(`   Keys To:   [${next.map((x) => x.key).join(", ")}]`);
-      console.log(`   ArrayOps:  ${diff.$__arrayOps?.length || 0} ops`);
 
       // Mostrar patches em propriedades
       const keyPatches = Object.keys(diff).filter((k) => k !== "$__arrayOps");
       if (keyPatches.length > 0) {
-        console.log(`   Patches:   [${keyPatches.join(", ")}]`);
       }
-      console.log();
     }
 
     expect(diffs.length).toBe(7);
@@ -127,21 +119,12 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
   it("deve aplicar diffs sequencialmente (avançar histórico)", () => {
     let currentState = structuredClone(history.step0);
 
-    console.log("\n=== APLICANDO DIFFS (Forward) ===\n");
-    console.log(
-      `Step 0: keys=[${currentState.map((x: any) => x.key).join(", ")}]`,
-    );
-
     for (let i = 0; i < 7; i++) {
       const from = history[`step${i}` as keyof typeof history];
       const to = history[`step${i + 1}` as keyof typeof history];
 
       const diff = diffJson(from, to);
       currentState = patchJson(currentState, diff);
-
-      console.log(
-        `Step ${i + 1}: keys=[${currentState.map((x: any) => x.key).join(", ")}]`,
-      );
 
       // Verificar se chegou no estado esperado
       expect(currentState).toEqual(to);
@@ -155,7 +138,6 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
 
     const reverseDiffs: any[] = [];
 
-    console.log("\n=== GERANDO REVERSE DIFFS ===\n");
 
     for (let i = 7; i > 0; i--) {
       const from = history[`step${i}` as keyof typeof history];
@@ -164,22 +146,14 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
       const reverseDiff = diffJson(from, to);
       reverseDiffs.push(reverseDiff);
 
-      console.log(`🔄 Reverse diff ${i} → ${i - 1}`);
-      console.log(`   From keys: [${from.map((x) => x.key).join(", ")}]`);
-      console.log(`   To keys:   [${to.map((x) => x.key).join(", ")}]`);
     }
 
-    console.log("\n=== APLICANDO ROLLBACK ===\n");
 
     for (let i = 0; i < 7; i++) {
       const expectedStep = 7 - i - 1;
       const expected = history[`step${expectedStep}` as keyof typeof history];
 
       currentState = patchJson(currentState, reverseDiffs[i]);
-
-      console.log(
-        `Step ${expectedStep}: keys=[${currentState.map((x: any) => x.key).join(", ")}]`,
-      );
 
       expect(currentState).toEqual(expected);
     }
@@ -191,9 +165,6 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
     const original = structuredClone(history.step0);
     let state = structuredClone(original);
 
-    console.log("\n=== ROUND-TRIP TEST (Objetos) ===\n");
-    console.log(`Original: ${state.length} objetos`);
-    console.log(`Keys: [${original.map((x: any) => x.key).join(", ")}]\n`);
 
     // FORWARD
     for (let i = 0; i < 7; i++) {
@@ -204,8 +175,6 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
       state = patchJson(state, diff);
     }
 
-    console.log(`After forward: ${state.length} objetos`);
-    console.log(`Keys: [${state.map((x: any) => x.key).join(", ")}]`);
     expect(state).toEqual(history.step7);
 
     // BACKWARD
@@ -217,11 +186,8 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
       state = patchJson(state, reverseDiff);
     }
 
-    console.log(`After backward: ${state.length} objetos`);
-    console.log(`Keys: [${state.map((x: any) => x.key).join(", ")}]\n`);
     expect(state).toEqual(original);
 
-    console.log("✅ Round-trip successful!");
   });
 
   it("deve detectar moves corretamente (não remove+add)", () => {
@@ -231,18 +197,12 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
 
     const diff = diffJson(from, to);
 
-    console.log("\n=== MOVE DETECTION (Objetos) ===");
-    console.log(`From: [${from.map((x) => x.key).join(", ")}]`);
-    console.log(`To:   [${to.map((x) => x.key).join(", ")}]`);
 
     const ops = diff.$__arrayOps || [];
     const moves = ops.filter((op: any) => op.type === "move");
     const removes = ops.filter((op: any) => op.type === "remove");
     const adds = ops.filter((op: any) => op.type === "add");
 
-    console.log(`\nMoves: ${moves.length}`);
-    console.log(`Removes: ${removes.length}`);
-    console.log(`Adds: ${adds.length}`);
 
     // Deve detectar como move, não remove+add
     expect(moves.length).toBeGreaterThan(0);
@@ -288,11 +248,8 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
 
     const diff67 = diffJson(history.step6, history.step7);
 
-    console.log("\n=== MÚLTIPLAS MUDANÇAS ===");
-    console.log("ArrayOps:", JSON.stringify(diff67.$__arrayOps, null, 2));
 
     const patches = Object.keys(diff67).filter((k) => k !== "$__arrayOps");
-    console.log("Patches:", patches);
 
     const result = patchJson(history.step6, diff67);
 
@@ -331,8 +288,6 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
   it("deve validar integridade após cada step", () => {
     let state = structuredClone(history.step0);
 
-    console.log("\n=== VALIDAÇÃO DE INTEGRIDADE ===\n");
-
     for (let i = 0; i < 7; i++) {
       const from = history[`step${i}` as keyof typeof history];
       const to = history[`step${i + 1}` as keyof typeof history];
@@ -343,13 +298,6 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
       // Validações
       const keys = state.map((x: any) => x.key);
       const uniqueKeys = new Set(keys);
-
-      console.log(`Step ${i + 1}:`);
-      console.log(`  Total: ${state.length} objetos`);
-      console.log(`  Keys únicas: ${uniqueKeys.size}`);
-      console.log(
-        `  Duplicatas: ${keys.length - uniqueKeys.size ? "❌" : "✅"}`,
-      );
 
       // Nenhuma duplicata
       expect(uniqueKeys.size).toBe(state.length);
@@ -364,6 +312,5 @@ describe("History Objects: Array de Objetos com Keys (Git-like)", () => {
       expect(state).toEqual(to);
     }
 
-    console.log("\n✅ Integridade validada em todos os steps!");
   });
 });

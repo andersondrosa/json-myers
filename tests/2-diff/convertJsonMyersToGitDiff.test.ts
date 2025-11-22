@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { convertJsonMyersToGitDiff } from "../../src/4-utils/convertJsonMyersToGitDiff";
+import { convertJsonMyersToGitDiff } from "../../src";
 
 describe("convertJsonMyersToGitDiff", () => {
   it("gera diff unificado para remoção e adição de linha", () => {

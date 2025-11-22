@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { diffJson } from "../../src/2-diff/diffJson";
-import { patchJson } from "../../src/3-patch/patchJson";
+import { diffJson } from "../../src";
+import { patchJson } from "../../src";
 
 /**
  * Teste de histórico CAÓTICO (vida real)
@@ -162,8 +162,6 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
   it("deve gerar diffs entre todos os steps (mix caótico)", () => {
     const diffs: any[] = [];
 
-    console.log("\n=== GERANDO DIFFS (Mix Caótico) ===\n");
-
     for (let i = 0; i < 7; i++) {
       const current = history[`step${i}` as keyof typeof history];
       const next = history[`step${i + 1}` as keyof typeof history];
@@ -171,15 +169,9 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
       const diff = diffJson(current, next);
       diffs.push(diff);
 
-      console.log(`📝 Diff ${i} → ${i + 1}:`);
-      console.log(`   Length: ${current.length} → ${next.length}`);
-      console.log(`   ArrayOps: ${diff.$__arrayOps?.length || 0} ops`);
-
       const patches = Object.keys(diff).filter((k) => k !== "$__arrayOps");
       if (patches.length > 0) {
-        console.log(`   Patches: ${patches.length} keys`);
       }
-      console.log();
     }
 
     expect(diffs.length).toBe(7);
@@ -188,17 +180,12 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
   it("deve aplicar diffs sequencialmente (forward caótico)", () => {
     let currentState = structuredClone(history.step0);
 
-    console.log("\n=== APLICANDO DIFFS (Forward Caótico) ===\n");
-    console.log(`Step 0: length=${currentState.length}`);
-
     for (let i = 0; i < 7; i++) {
       const from = history[`step${i}` as keyof typeof history];
       const to = history[`step${i + 1}` as keyof typeof history];
 
       const diff = diffJson(from, to);
       currentState = patchJson(currentState, diff);
-
-      console.log(`Step ${i + 1}: length=${currentState.length}`);
 
       // Verificar estado esperado
       expect(currentState).toEqual(to);
@@ -212,29 +199,19 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
 
     const reverseDiffs: any[] = [];
 
-    console.log("\n=== GERANDO REVERSE DIFFS ===\n");
-
     for (let i = 7; i > 0; i--) {
       const from = history[`step${i}` as keyof typeof history];
       const to = history[`step${i - 1}` as keyof typeof history];
 
       const reverseDiff = diffJson(from, to);
       reverseDiffs.push(reverseDiff);
-
-      console.log(
-        `🔄 Reverse diff ${i} → ${i - 1}: ${reverseDiff.$__arrayOps?.length || 0} ops`,
-      );
     }
-
-    console.log("\n=== APLICANDO ROLLBACK ===\n");
 
     for (let i = 0; i < 7; i++) {
       const expectedStep = 7 - i - 1;
       const expected = history[`step${expectedStep}` as keyof typeof history];
 
       currentState = patchJson(currentState, reverseDiffs[i]);
-
-      console.log(`Step ${expectedStep}: length=${currentState.length}`);
 
       expect(currentState).toEqual(expected);
     }
@@ -246,9 +223,6 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
     const original = structuredClone(history.step0);
     let state = structuredClone(original);
 
-    console.log("\n=== ROUND-TRIP TEST (Caótico) ===\n");
-    console.log(`Original: ${state.length} items`);
-
     // FORWARD
     for (let i = 0; i < 7; i++) {
       const from = history[`step${i}` as keyof typeof history];
@@ -258,7 +232,6 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
       state = patchJson(state, diff);
     }
 
-    console.log(`After forward: ${state.length} items`);
     expect(state).toEqual(history.step7);
 
     // BACKWARD
@@ -270,10 +243,7 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
       state = patchJson(state, reverseDiff);
     }
 
-    console.log(`After backward: ${state.length} items`);
     expect(state).toEqual(original);
-
-    console.log("\n✅ Round-trip successful!");
   });
 
   it("deve lidar com todos os tipos de dados", () => {
@@ -290,14 +260,12 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
     expect(typeof state0[4]).toBe("object"); // { value: "random" }
     expect(state0[5]).toBe(null); // null
 
-    console.log("\n=== TIPOS DE DADOS NO STEP 0 ===");
     state0.forEach((item: any, idx: number) => {
       const type = item === null ? "null" : typeof item;
       const desc =
         typeof item === "object" && item !== null
           ? JSON.stringify(item).substring(0, 30)
           : String(item);
-      console.log(`  [${idx}] ${type}: ${desc}`);
     });
   });
 
@@ -305,14 +273,8 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
     // step2 → step3: string move para o final
     const diff = diffJson(history.step2, history.step3);
 
-    console.log("\n=== MOVE DETECTION (Caótico) ===");
-    console.log("Diff:", JSON.stringify(diff, null, 2));
-
     const ops = diff.$__arrayOps || [];
     const moves = ops.filter((op: any) => op.type === "move");
-
-    console.log(`\nTotal ops: ${ops.length}`);
-    console.log(`Moves: ${moves.length}`);
 
     expect(moves.length).toBeGreaterThan(0);
   });
@@ -322,12 +284,6 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
 
     const state3 = structuredClone(history.step3);
     const diff = diffJson(state3, history.step4);
-
-    console.log("\n=== PATCHES EM NESTED ===");
-    console.log(
-      "Diff patches:",
-      Object.keys(diff).filter((k) => k !== "$__arrayOps"),
-    );
 
     const result = patchJson(state3, diff);
 
@@ -347,8 +303,6 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
 
     const diff = diffJson(history.step3, history.step4);
 
-    console.log("\n=== SUBSTITUIÇÃO DE TIPOS ===");
-
     const result = patchJson(history.step3, diff);
 
     // Índice 1 era número, agora é objeto
@@ -361,17 +315,12 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
   it("deve validar integridade em cada step", () => {
     let state = structuredClone(history.step0);
 
-    console.log("\n=== VALIDAÇÃO DE INTEGRIDADE (Caótico) ===\n");
-
     for (let i = 0; i < 7; i++) {
       const from = history[`step${i}` as keyof typeof history];
       const to = history[`step${i + 1}` as keyof typeof history];
 
       const diff = diffJson(from, to);
       state = patchJson(state, diff);
-
-      console.log(`Step ${i + 1}:`);
-      console.log(`  Total items: ${state.length}`);
 
       // Contar tipos
       const types = state.reduce((acc: any, item: any) => {
@@ -380,13 +329,9 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
         return acc;
       }, {});
 
-      console.log(`  Tipos:`, types);
-
       // Estado correto
       expect(state).toEqual(to);
     }
-
-    console.log("\n✅ Integridade validada!");
   });
 
   it("deve preservar null e undefined corretamente", () => {
@@ -395,11 +340,6 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
     const state0 = history.step0;
     const state1 = history.step1;
     const state7 = history.step7;
-
-    console.log("\n=== NULL/UNDEFINED ===");
-    console.log(`Step 0 tem null: ${state0.includes(null)}`);
-    console.log(`Step 1 tem null: ${state1.includes(null)}`);
-    console.log(`Step 7 tem null: ${state7.includes(null)}`);
 
     expect(state0.includes(null)).toBe(true);
     expect(state1.includes(null)).toBe(true); // ainda tem
@@ -421,20 +361,11 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
       (x: any) => typeof x === "object" && x !== null && x.id === "user-2",
     );
 
-    console.log("\n=== IDs NUMÉRICOS E STRING ===");
-    console.log("Objeto com id=1:", numericId);
-    console.log("Objeto com id='user-2':", stringId);
-
     expect(numericId).toBeDefined();
     expect(stringId).toBeDefined();
 
     // Aplicar diff e verificar que ambos são rastreados
     const diff56 = diffJson(history.step5, history.step6);
-
-    console.log(
-      "\nPatches no diff 5→6:",
-      Object.keys(diff56).filter((k) => k !== "$__arrayOps"),
-    );
 
     // user-2 deve ter patch (email mudou)
     expect(diff56["user-2"]).toBeDefined();
@@ -447,9 +378,6 @@ describe("History Complex: Mix Caótico (Vida Real)", () => {
     const complexObj: any = state.find(
       (x: any) => typeof x === "object" && x !== null && "settings" in x,
     );
-
-    console.log("\n=== NESTED ARRAYS ===");
-    console.log("Objeto complexo:", JSON.stringify(complexObj, null, 2));
 
     expect(complexObj.settings).toBeDefined();
     expect(Array.isArray(complexObj.meta)).toBe(true);

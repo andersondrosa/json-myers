@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { patchJson } from "../../src/3-patch/patchJson";
-import { diffJson } from "../../src/2-diff/diffJson";
+import { patchJson, diffJson } from "../../src";
 
 describe("patchJson", () => {
   it("should apply primitive change", () => {

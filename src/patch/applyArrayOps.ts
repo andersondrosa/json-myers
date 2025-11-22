@@ -1,5 +1,5 @@
-import { diffJson } from "../2-diff/diffJson";
-import { isNonEmptyDiff, getKey } from "../2-diff/utils";
+import { diffJson } from "../diff/diffJson";
+import { isNonEmptyDiff, getKey } from "../diff/utils";
 
 export function applyArrayOps(
   ops: any[],

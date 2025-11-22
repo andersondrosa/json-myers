@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diffJson } from "../../src/2-diff/diffJson";
-import { patchJson } from "../../src/3-patch/patchJson";
+import { diffJson, patchJson } from "../../src";
 
 describe("CORE: Moves - Testes Base Isolados", () => {
   describe("Single Move", () => {
@@ -83,7 +82,6 @@ describe("CORE: Moves - Testes Base Isolados", () => {
       const modified = ["a", "d", "e", "b", "c"];
 
       const diff = diffJson(original, modified);
-      console.log("Diff:", JSON.stringify(diff, null, 2));
 
       const result = patchJson(original, diff);
 
@@ -110,7 +108,6 @@ describe("CORE: Moves - Testes Base Isolados", () => {
       ];
 
       const diff = diffJson(original, modified);
-      console.log("Diff:", JSON.stringify(diff, null, 2));
 
       const result = patchJson(original, diff);
 

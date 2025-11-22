@@ -1,9 +1,9 @@
 import { describe, test, expect } from "vitest";
 import {
+  myersDiff,
   myersDiffOptimization,
   optimizedDiffToMyersRaw,
-} from "../../src/1-core/myersDiffOptimization";
-import { myersDiff } from "../../src/1-core/myersDiff";
+} from "../../src";
 
 describe("Myers Diff Optimization", () => {
   //
@@ -116,7 +116,6 @@ describe("Myers Diff Optimization", () => {
 
     const rawDiffSemMove = myersDiff(oldArray, newArray);
 
-    // console.log(rawDiffSemMove);
 
     expect(rawDiffSemMove).toEqual([
       { type: "add", index: 0, item: "front yard" },

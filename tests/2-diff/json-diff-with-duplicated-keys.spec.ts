@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diffArray } from "../../src/2-diff/diffArray";
+import { diffArray } from "../../src";
 
 describe("diffArray - Lista com objetos com chaves duplicadas", () => {
   //

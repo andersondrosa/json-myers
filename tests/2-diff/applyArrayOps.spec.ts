@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyArrayOps } from "../../src/3-patch/applyArrayOps";
-import { myersDiff } from "../../src/1-core/myersDiff";
+import { myersDiff, applyArrayOps } from "../../src";
 
 describe("applyArrayOps", () => {
   //
@@ -10,7 +9,7 @@ describe("applyArrayOps", () => {
       { key: "bar", value: 2 },
     ];
     const modified = [{ key: "foo", value: 1 }];
-    const modifiedIds = [];
+    const modifiedIds: any[] = [];
     const result: any = { $__arrayOps: [] };
 
     const ops = [{ type: "remove", index: 1, item: "#bar" }];
@@ -87,11 +86,9 @@ describe("applyArrayOps", () => {
     const result: any = { $__arrayOps: [] };
 
     const ops = myersDiff(["#a", "#b"], ["#b", "#a"]);
-    // console.dir(ops, { depth: 10 });
 
     applyArrayOps(ops, original, modified, modifiedIds, result);
 
-    // console.dir(result, { depth: 10 });
     expect(result.$__arrayOps).toEqual([
       { type: "remove", index: 0, key: "a" },
       { type: "add", index: 1, key: "a" },

@@ -3,7 +3,7 @@ import {
   myersDiff,
   applyMyersDiff,
   rollbackMyersDiff,
-} from "../../src/1-core/myersDiff";
+} from "../../src";
 
 describe("Myers Diff Algorithm", () => {
   //
@@ -57,7 +57,6 @@ describe("Myers Diff Algorithm", () => {
 
     const diff = myersDiff(oldArray, newArray);
 
-    console.log(diff);
 
     const applied = applyMyersDiff(oldArray, diff);
     const rollbacked = rollbackMyersDiff(newArray, diff);

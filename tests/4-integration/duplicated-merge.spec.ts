@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { patchJson } from "../../src/3-patch/patchJson"; // ou o nome correto
-import { diffJson } from "../../src/2-diff/diffJson";
+import { patchJson } from "../../src"; // ou o nome correto
+import { diffJson } from "../../src";
 
 // Utilitário auxiliar para gerar + aplicar o diff
 function applyDiff(original: any, modified: any) {
@@ -25,7 +25,6 @@ describe("patchJson com listas e keys duplicadas", () => {
 
     const diff = diffJson(original, modified);
 
-    console.log(JSON.stringify(diff, null, 2));
 
     const merged = patchJson(original, diff);
 

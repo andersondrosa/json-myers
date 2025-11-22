@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diffSmartKeys } from "../../src/2-diff/diffSmartKeys";
+import { diffSmartKeys } from "../../src";
 
 describe("diffSmartKeys", () => {
   it("deve gerar diff interno entre dois objetos com mesma key", () => {

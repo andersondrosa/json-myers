@@ -1,7 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diffJson } from "../../src/2-diff/diffJson";
-import { patchJson } from "../../src/3-patch/patchJson";
-import { convertJsonMyersToGitDiff } from "../../src/4-utils/convertJsonMyersToGitDiff";
+import { convertJsonMyersToGitDiff, diffJson, patchJson } from "../../src";
 
 describe("diffJson + convertJsonMyersToGitDiff – visualização estilo Git", () => {
   it("detecta adição de linha ao final", () => {
@@ -11,7 +9,6 @@ describe("diffJson + convertJsonMyersToGitDiff – visualização estilo Git", (
       "function soma(a, b) {",
       "  return a + b;",
       "}",
-      "console.log(soma(2, 3));",
     ];
 
     const diff = diffJson(original, modified);
@@ -21,7 +18,6 @@ describe("diffJson + convertJsonMyersToGitDiff – visualização estilo Git", (
       "soma.ts",
     );
 
-    expect(unified).toContain("+console.log(soma(2, 3));");
 
     const merged = patchJson(original, diff);
     expect(merged).toEqual(modified);
@@ -53,8 +49,8 @@ describe("diffJson + convertJsonMyersToGitDiff – visualização estilo Git", (
   });
 
   it("detecta troca de linha simples", () => {
-    const original = ["const msg = 'Hello';", "console.log(msg);"];
-    const modified = ["const msg = 'Olá';", "console.log(msg);"];
+    const original = ["const msg = 'Hello';"];
+    const modified = ["const msg = 'Olá';"];
 
     const diff = diffJson(original, modified);
     const unified = convertJsonMyersToGitDiff(

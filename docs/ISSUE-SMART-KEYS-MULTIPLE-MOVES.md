@@ -503,8 +503,8 @@ Apenas cenários **muito específicos**:
 
 ## 📚 Referências
 
-- **Código:** `src/3-patch/patchJson.ts` (linha 100-180)
-- **Código:** `src/1-core/myersDiff.ts` (linha 82-102)
+- **Código:** `src.ts` (linha 100-180)
+- **Código:** `src.ts` (linha 82-102)
 - **Teste:** `tests/4-integration/test-history.spec.ts` (linha 104-136)
 - **Debug:** `debug-history-order.js`
 - **Documentação:** `docs/MYERS-LOGIC.md`

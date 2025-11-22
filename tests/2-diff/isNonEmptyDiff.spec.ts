@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isNonEmptyDiff } from "../../src/2-diff/utils";
+import { isNonEmptyDiff } from "../../src/diff/utils";
 
 describe("isNonEmptyDiff", () => {
   it("retorna false para objetos vazios", () => {

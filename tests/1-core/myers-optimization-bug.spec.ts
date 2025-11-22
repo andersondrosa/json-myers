@@ -1,6 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { myersDiff } from "../../src/1-core/myersDiff";
-import { myersDiffOptimization } from "../../src/1-core/myersDiffOptimization";
+import { myersDiff, myersDiffOptimization } from "../../src";
 
 describe("🐛 BUG: myersDiffOptimization - Ajuste de índices `to`", () => {
   test("deve ajustar índice `to` quando há múltiplos moves", () => {
@@ -18,13 +17,8 @@ describe("🐛 BUG: myersDiffOptimization - Ajuste de índices `to`", () => {
       { type: "add", index: 2, item: "elderberry" },
     ];
 
-    console.log("\n=== TESTE DO BUG ===");
-    console.log("Raw ops:", JSON.stringify(rawOps, null, 2));
-
     // Optimization converte remove+add em move
     const optimized = myersDiffOptimization(rawOps as any);
-
-    console.log("\nOptimized ops:", JSON.stringify(optimized, null, 2));
 
     // ✅ CORRETO seria:
     const expected = [
@@ -42,9 +36,6 @@ describe("🐛 BUG: myersDiffOptimization - Ajuste de índices `to`", () => {
     expect(optimized[0].type).toBe("move");
     expect(optimized[1].type).toBe("move");
 
-    console.log("\n✅ Move 1:", optimized[0]);
-    console.log("✅ Move 2:", optimized[1]);
-
     // ⚠️ Este teste VAI FALHAR se aplicarmos os moves gerados!
     // Descomente para ver o problema:
 
@@ -59,9 +50,9 @@ describe("🐛 BUG: myersDiffOptimization - Ajuste de índices `to`", () => {
       }
     }
 
-    console.log("\nResultado:", result);
-    console.log("Esperado:", modified);
-    console.log("Match:", JSON.stringify(result) === JSON.stringify(modified));
+   
+   
+   
 
     expect(result).toEqual(modified);  // ❌ VAI FALHAR!
     */
@@ -80,9 +71,6 @@ describe("🐛 BUG: myersDiffOptimization - Ajuste de índices `to`", () => {
 
     const optimized = myersDiffOptimization(rawOps as any);
 
-    console.log("\n=== CASO SIMPLES ===");
-    console.log("Optimized:", JSON.stringify(optimized, null, 2));
-
     // Para este caso simples, pode funcionar ou não dependendo da ordem
     expect(optimized.length).toBe(2);
   });
@@ -94,12 +82,7 @@ describe("🐛 BUG: myersDiffOptimization - Ajuste de índices `to`", () => {
     // a: 0→2, b: 1→3, c: 2→0, d: 3→1
     const rawOps = myersDiff(original, modified);
 
-    console.log("\n=== CASO COMPLEXO ===");
-    console.log("Raw ops count:", rawOps.length);
-
     const optimized = myersDiffOptimization(rawOps as any);
-
-    console.log("Optimized:", JSON.stringify(optimized, null, 2));
 
     // Deve gerar 4 moves (ou menos se otimizar bem)
     expect(optimized.some((op: any) => op.type === "move")).toBe(true);

@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diffJson } from "../../src/2-diff/diffJson";
-import { patchJson } from "../../src/3-patch/patchJson";
+import { diffJson, patchJson } from "../../src";
 
 describe("diffJson – versionamento de código por linha", () => {
   it("detecta adição de linha ao final do código", () => {

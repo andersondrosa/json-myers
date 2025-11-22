@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diffJson } from "../../src/2-diff/diffJson";
-import { patchJson } from "../../src/3-patch/patchJson";
+import { patchJson, diffJson } from "../../src";
 
 describe("diffJson", () => {
   it("gera diff simples entre dois objetos JSON", () => {

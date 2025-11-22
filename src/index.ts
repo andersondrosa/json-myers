@@ -1,15 +1,25 @@
-// 1-CORE: Algoritmo Myers base
-export { myersDiff } from "./1-core/myersDiff";
-export { myersDiffOptimization } from "./1-core/myersDiffOptimization";
 
-// 2-DIFF: Geração de diferenças
-export { diffJson } from "./2-diff/diffJson";
-export { diffArray } from "./2-diff/diffArray";
-export { diffObject } from "./2-diff/diffObject";
+// core: Algoritmo Myers base
+export { myersDiff, applyMyersDiff, rollbackMyersDiff } from "./core/myersDiff";
+export {
+  myersDiffOptimization,
+  optimizedDiffToMyersRaw,
+} from "./core/myersDiffOptimization";
 
-// 3-PATCH: Aplicação de patches
-export { patchJson } from "./3-patch/patchJson";
+// diff: Geração de diferenças
+export { diffJson } from "./diff/diffJson";
+export { diffArray } from "./diff/diffArray";
+export { diffObject } from "./diff/diffObject";
+export { diffSmartKeys } from "./diff/diffSmartKeys";
+
+// patch: Aplicação de patches
+export { patchJson } from "./patch/patchJson";
+export { applyArrayOps } from "./patch/applyArrayOps";
 
 // Aliases (backwards compatibility)
-export { diffJson as diff } from "./2-diff/diffJson";
-export { patchJson as patch } from "./3-patch/patchJson";
+export { diffJson as diff } from "./diff/diffJson";
+export { patchJson as patch } from "./patch/patchJson";
+
+// Utils
+export { convertJsonMyersToGitDiff } from "./utils/convertJsonMyersToGitDiff";
+

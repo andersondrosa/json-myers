@@ -87,11 +87,11 @@ src/
 ├── index.ts                    # Exports públicos
 ├── types.ts                    # Definições TypeScript
 │
-├── 1-core/                     # CAMADA 1: Algoritmo Myers Base
+├── core/                     # CAMADA 1: Algoritmo Myers Base
 │   ├── myersDiff.ts            # ✅ Algoritmo Myers correto
 │   └── myersDiffOptimization.ts # ✅ Detecta moves
 │
-├── 2-diff/                     # CAMADA 2: Geração de Diffs
+├── diff/                     # CAMADA 2: Geração de Diffs
 │   ├── diffJson.ts             # Entry point principal
 │   ├── diffArray.ts            # Comparação de arrays
 │   ├── diffObject.ts           # Comparação de objetos
@@ -100,11 +100,11 @@ src/
 │   ├── addRemovedSmartKeys.ts  # Helpers para smart keys
 │   └── utils.ts                # Utilitários
 │
-├── 3-patch/                    # CAMADA 3: Aplicação de Patches
+├── patch/                    # CAMADA 3: Aplicação de Patches
 │   ├── patchJson.ts            # ✅ Aplica diffs corretamente
 │   └── applyArrayOps.ts        # Executor de operações
 │
-└── 4-utils/                    # CAMADA 4: Utilitários
+└── utils/                    # CAMADA 4: Utilitários
     ├── convertJsonMyersToGitDiff.ts # Conversão para Git diff
     └── index.ts                # Exports
 ```
@@ -113,18 +113,18 @@ src/
 
 ```
 tests/
-├── 1-core/                     # Testes do algoritmo Myers
+├── core/                     # Testes do algoritmo Myers
 │   ├── myers-diff.spec.ts      # ✅ Algoritmo core
 │   ├── myers-diff-optimization.spec.ts # ✅ Detecção de moves
 │   └── moves-base.spec.ts      # ✅ Testes com arrays simples
 │
-├── 2-diff/                     # Testes de geração de diffs
+├── diff/                     # Testes de geração de diffs
 │   ├── diff-array.spec.ts
 │   ├── diff-object.spec.ts
 │   ├── diff-smart-keys.spec.ts
 │   └── ...
 │
-├── 3-patch/                    # Testes de aplicação
+├── patch/                    # Testes de aplicação
 │   └── apply-moves.spec.ts
 │
 └── 4-integration/              # Testes end-to-end

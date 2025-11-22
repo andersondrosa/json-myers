@@ -1,8 +1,8 @@
-import { myersDiff } from "../1-core/myersDiff";
-import { myersDiffOptimization } from "../1-core/myersDiffOptimization";
+import { myersDiff } from "../core/myersDiff";
+import { myersDiffOptimization } from "../core/myersDiffOptimization";
 import { getArrayItemIdentity, getKey } from "./utils";
 import { diffSmartKeys } from "./diffSmartKeys";
-import { applyArrayOps } from "../3-patch/applyArrayOps";
+import { applyArrayOps } from "../patch/applyArrayOps";
 
 export function diffArray(original: any[], modified: any[]): any {
   const result: any = { $__arrayOps: [] };

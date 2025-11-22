@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diffJson } from "../../src/2-diff/diffJson";
-import { diffObject } from "../../src/2-diff/diffObject";
+import { diffJson, diffObject } from "../../src";
 
 describe("diffObject", () => {
   it("detecta valor primitivo diferente", () => {

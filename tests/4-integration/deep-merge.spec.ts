@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { patchJson } from "../../src/3-patch/patchJson";
+import { patchJson } from "../../src";
 
 const original = [
   {
@@ -241,7 +241,6 @@ const _modified = [
 describe("Histórico de modificações com diffs (sem iteração)", () => {
   it("aplica modificação 0", () => {
     const modified = patchJson(original, diff);
-    console.log(modified);
     expect(modified).toEqual(_modified);
   });
 });
