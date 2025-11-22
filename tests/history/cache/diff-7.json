@@ -1,0 +1,200 @@
+{
+  "$__arrayOps": [
+    {
+      "type": "remove",
+      "index": 5,
+      "item": {
+        "key": "descricao",
+        "type": "string",
+        "value": "Texto duplicado!"
+      }
+    },
+    {
+      "type": "move",
+      "from": 11,
+      "to": 8,
+      "item": "#area_total"
+    },
+    {
+      "type": "move",
+      "from": 7,
+      "to": 10,
+      "item": "#banheiros"
+    },
+    {
+      "type": "remove",
+      "index": 12,
+      "key": "invalidField"
+    },
+    {
+      "type": "move",
+      "from": 0,
+      "to": 13,
+      "item": "#nota"
+    },
+    {
+      "type": "move",
+      "from": 1,
+      "to": 13,
+      "item": "#descricao"
+    },
+    {
+      "type": "move",
+      "from": 3,
+      "to": 13,
+      "item": "#preco"
+    },
+    {
+      "type": "move",
+      "from": 4,
+      "to": 13,
+      "item": "#dormitorios"
+    },
+    {
+      "type": "move",
+      "from": 9,
+      "to": 13,
+      "item": "#configurado"
+    },
+    {
+      "type": "move",
+      "from": 2,
+      "to": 14,
+      "item": "#tipo_imovel"
+    },
+    {
+      "type": "move",
+      "from": 6,
+      "to": 14,
+      "item": "#vagas"
+    }
+  ],
+  "nota": {
+    "meta": {
+      "min": 0,
+      "max": 10
+    },
+    "role": "rating"
+  },
+  "descricao": {
+    "value": "Texto atualizado e único",
+    "meta": {
+      "maxLength": 1000
+    },
+    "role": "description"
+  },
+  "tipo_imovel": {
+    "type": "string",
+    "meta": {
+      "options": [
+        {
+          "key": "apartamento",
+          "label": "Apartamento"
+        },
+        {
+          "key": "casa",
+          "label": "Casa"
+        },
+        {
+          "key": "studio",
+          "label": "Studio"
+        }
+      ]
+    },
+    "role": "propertyType"
+  },
+  "preco": {
+    "type": "number",
+    "value": 450000,
+    "meta": {
+      "type": "BRL",
+      "min": 0
+    }
+  },
+  "dormitorios": {
+    "type": "number",
+    "value": 3,
+    "meta": {
+      "min": 0
+    },
+    "role": "bedrooms"
+  },
+  "vagas": {
+    "value": 2,
+    "meta": {
+      "min": 0
+    },
+    "role": "garages"
+  },
+  "banheiros": {
+    "type": "number",
+    "value": 2,
+    "meta": {
+      "min": 0
+    },
+    "role": "bathrooms"
+  },
+  "area_util": {
+    "type": "number",
+    "value": 95,
+    "meta": {
+      "type": "m²",
+      "min": 0
+    },
+    "role": "area"
+  },
+  "configurado": {
+    "__debug": {
+      "$__remove": true
+    },
+    "role": "furnished"
+  },
+  "caracteristicas_adicionais": {
+    "value": {
+      "$__arrayOps": [
+        {
+          "type": "remove",
+          "index": 1,
+          "item": null
+        },
+        {
+          "type": "remove",
+          "index": 2,
+          "item": 123
+        },
+        {
+          "type": "remove",
+          "index": 3,
+          "item": {
+            "tipo": "portaria"
+          }
+        },
+        {
+          "type": "add",
+          "index": 1,
+          "item": "portaria"
+        },
+        {
+          "type": "add",
+          "index": 2,
+          "item": "vaga de visitante"
+        }
+      ]
+    },
+    "role": "features"
+  },
+  "area_total": {
+    "meta": {
+      "min": 0
+    },
+    "value": 120,
+    "role": "area"
+  },
+  "suites": {
+    "value": 1,
+    "meta": {
+      "min": 0
+    },
+    "role": "suites"
+  }
+}

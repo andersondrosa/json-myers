@@ -1,0 +1,76 @@
+[
+  {
+    "key": "area_util",
+    "type": "number",
+    "value": 95,
+    "meta": { "type": "m²", "min": 0 },
+    "role": "area"
+  },
+  {
+    "key": "preco",
+    "type": "number",
+    "value": 450000,
+    "meta": { "type": "BRL", "min": 0 },
+    "role": "currency"
+  },
+  {
+    "key": "area_total",
+    "type": "number",
+    "value": 120,
+    "meta": { "type": "m²", "min": 0 },
+    "role": "area"
+  },
+  {
+    "key": "quartos",
+    "type": "number",
+    "value": 3,
+    "meta": { "min": 0 },
+    "role": "bedrooms"
+  },
+  {
+    "key": "suites",
+    "type": "number",
+    "value": 1,
+    "meta": { "min": 0 },
+    "role": "suites"
+  },
+  {
+    "key": "banheiros",
+    "type": "number",
+    "value": 2,
+    "meta": { "min": 0 },
+    "role": "bathrooms"
+  },
+  {
+    "key": "vagas",
+    "type": "number",
+    "value": 2,
+    "meta": { "min": 0 },
+    "role": "garages"
+  },
+  {
+    "key": "tipo_imovel",
+    "type": "string",
+    "value": "apartamento",
+    "meta": {
+      "options": [
+        { "key": "apartamento", "label": "Apartamento" },
+        { "key": "casa", "label": "Casa" },
+        { "key": "studio", "label": "Studio" }
+      ]
+    },
+    "role": "propertyType"
+  },
+  {
+    "key": "status",
+    "type": "string",
+    "value": "vendido",
+    "meta": {
+      "options": [
+        { "key": "disponivel", "label": "Disponível" },
+        { "key": "vendido", "label": "Vendido" }
+      ]
+    },
+    "role": "status"
+  }
+]

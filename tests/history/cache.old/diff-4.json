@@ -1,0 +1,69 @@
+{
+  "$__arrayOps": [
+    {
+      "type": "move",
+      "from": 9,
+      "to": 2,
+      "item": "#ano_construcao"
+    },
+    {
+      "type": "move",
+      "from": 10,
+      "to": 2,
+      "item": "#andares"
+    },
+    {
+      "type": "move",
+      "from": 11,
+      "to": 2,
+      "item": "#andar"
+    },
+    {
+      "type": "move",
+      "from": 0,
+      "to": 7,
+      "item": "#preco"
+    },
+    {
+      "type": "move",
+      "from": 1,
+      "to": 7,
+      "item": "#descricao"
+    },
+    {
+      "type": "move",
+      "from": 4,
+      "to": 7,
+      "item": "#quartos"
+    },
+    {
+      "type": "move",
+      "from": 12,
+      "to": 7,
+      "item": "#possui_mobiliado"
+    },
+    {
+      "type": "move",
+      "from": 3,
+      "to": 8,
+      "item": "#tipo_imovel"
+    }
+  ],
+  "preco": {
+    "value": 359000
+  },
+  "descricao": {
+    "meta": {
+      "placeholder": "Descreva os destaques do imóvel..."
+    }
+  },
+  "area_total": {
+    "value": 50,
+    "meta": {
+      "step": 1
+    }
+  },
+  "quartos": {
+    "value": 2
+  }
+}

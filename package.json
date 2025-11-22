@@ -1,0 +1,76 @@
+{
+  "name": "json-myers",
+  "version": "1.0.0",
+  "description": "High-performance JSON diff/patch library using Myers algorithm with move detection and smart keys support",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "import": "./dist/index.mjs",
+    "require": "./dist/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "vitest --run",
+    "test:coverage": "vitest --run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.13",
+    "prettier": "^3.6.2",
+    "tsup": "^8.0.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.13"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "json",
+    "diff",
+    "patch",
+    "myers",
+    "myers-algorithm",
+    "git-diff",
+    "deep-diff",
+    "json-diff",
+    "json-patch",
+    "smart-keys",
+    "array-diff",
+    "object-diff",
+    "move-detection",
+    "synchronization",
+    "versioning",
+    "undo-redo",
+    "rollback",
+    "history",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andersondrosa/json-myers.git"
+  },
+  "homepage": "https://github.com/andersondrosa/json-myers#readme",
+  "bugs": {
+    "url": "https://github.com/andersondrosa/json-myers/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Anderson D. Rosa",
+    "email": "andersondrosa@outlook.com",
+    "url": "https://github.com/andersondrosa"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

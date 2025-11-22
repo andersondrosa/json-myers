@@ -1,0 +1,37 @@
+# Source files
+src/
+tests/
+*.spec.ts
+*.test.ts
+
+# Config files
+.prettierrc
+.gitignore
+tsconfig.json
+vitest.config.ts
+tsup.config.ts
+
+# Development
+node_modules/
+.vscode/
+.idea/
+*.log
+coverage/
+
+# Git
+.git/
+.github/
+
+# Test files
+tests/
+debug-*.js
+*.spec.js
+
+# Documentation (keep only essential)
+docs/ISSUE-*.md
+
+# Misc
+.DS_Store
+*.swp
+*.swo
+*~

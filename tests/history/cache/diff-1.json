@@ -1,0 +1,82 @@
+{
+  "$__arrayOps": [
+    {
+      "type": "move",
+      "from": 0,
+      "to": 3,
+      "item": "#area_total"
+    },
+    {
+      "type": "move",
+      "from": 7,
+      "to": 3,
+      "item": "#tipo_imovel"
+    },
+    {
+      "type": "move",
+      "from": 9,
+      "to": 3,
+      "item": "#descricao"
+    },
+    {
+      "type": "move",
+      "from": 1,
+      "to": 5,
+      "item": "#area_util"
+    },
+    {
+      "type": "move",
+      "from": 6,
+      "to": 10,
+      "item": "#vagas"
+    }
+  ],
+  "area_total": {
+    "value": 130
+  },
+  "area_util": {
+    "value": 105
+  },
+  "preco": {
+    "value": 530000,
+    "label": "Preço de venda"
+  },
+  "quartos": {
+    "value": 4
+  },
+  "suites": {
+    "value": 2
+  },
+  "banheiros": {
+    "value": 3
+  },
+  "vagas": {
+    "value": 3
+  },
+  "tipo_imovel": {
+    "value": "casa",
+    "meta": {
+      "options": {
+        "$__arrayOps": [],
+        "casa": {
+          "label": "Casa térrea"
+        }
+      }
+    },
+    "label": "Tipo de imóvel"
+  },
+  "status": {
+    "value": "vendido",
+    "meta": {
+      "options": {
+        "$__arrayOps": [],
+        "vendido": {
+          "label": "Vendido recentemente"
+        }
+      }
+    }
+  },
+  "descricao": {
+    "value": "Imóvel recém-reformado com varanda gourmet."
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "$__arrayOps": [
+    {
+      "type": "add",
+      "index": 11,
+      "key": "andar"
+    },
+    {
+      "type": "add",
+      "index": 12,
+      "key": "possui_mobiliado"
+    }
+  ],
+  "andar": {
+    "type": "number",
+    "value": 3,
+    "meta": {
+      "min": 0
+    },
+    "role": "floorNumber",
+    "label": "Andar"
+  },
+  "possui_mobiliado": {
+    "type": "boolean",
+    "value": true,
+    "role": "furnished",
+    "label": "Mobiliado"
+  },
+  "preco": {
+    "value": 365000
+  },
+  "descricao": {
+    "value": "Studio compacto ideal para estudantes ou solteiros."
+  },
+  "area_total": {
+    "value": 48
+  },
+  "tipo_imovel": {
+    "value": "studio",
+    "meta": {
+      "options": {
+        "$__arrayOps": [],
+        "studio": {
+          "label": "Studio moderno"
+        }
+      }
+    }
+  },
+  "quartos": {
+    "value": 1
+  },
+  "area_util": {
+    "value": null
+  },
+  "banheiros": {
+    "value": 1
+  },
+  "status": {
+    "value": "disponivel"
+  },
+  "vagas": {
+    "value": 1
+  },
+  "ano_construcao": {
+    "value": 2022
+  },
+  "andares": {
+    "value": 1
+  }
+}
