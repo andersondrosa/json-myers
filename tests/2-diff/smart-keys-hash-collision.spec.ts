@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { diffJson, patchJson } from "../src";
+import { diffJson, patchJson } from "../../src";
 
 describe("🔥 EDGE CASE: Colisão de identidade com #", () => {
   it("string '#a' vs objeto {key:'a'} - COLISÃO!", () => {

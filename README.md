@@ -5,110 +5,129 @@
 [![Status](https://img.shields.io/badge/status-stable-green)](https://github.com/andersondrosa/json-myers)
 [![Version](https://img.shields.io/badge/version-1.0.0--rc-blue)](https://github.com/andersondrosa/json-myers)
 
-Biblioteca de alta performance para calcular diferenças (diffs) e aplicar patches em estruturas JSON profundas, usando o algoritmo de Myers otimizado (mesmo usado pelo Git).
+**The first JSON diff/patch library that actually understands arrays.**
 
-## O que é o json-myers?
+## The Problem
 
-O json-myers é uma solução completa para detectar e aplicar mudanças em dados JSON, permitindo sincronização eficiente, versionamento e rastreamento de alterações. Ele vai além de simples comparações, oferecendo detecção inteligente de movimentações em arrays e suporte especial para objetos com chaves únicas.
+Traditional deep merge tools (Lodash, Ramda, etc.) fail catastrophically with arrays:
 
-## Características Principais
+```javascript
+// Using lodash.merge or similar tools:
+const original = {
+  users: [
+    { id: 1, name: "Alice", role: "admin" },
+    { id: 2, name: "Bob", role: "user" }
+  ]
+};
 
-- 🚀 **Alta Performance**: Algoritmo de Myers O(ND) otimizado (mesmo do Git)
-- 🔄 **Detecção de Movimentação**: Identifica quando itens são movidos em arrays
-- 🔑 **Smart Keys**: Tratamento especial para arrays de objetos com `id` ou `key` (suporta IDs numéricos!)
-- 📦 **Patches Mínimos**: Gera apenas as diferenças necessárias
-- 🔙 **Reversível**: Permite desfazer mudanças aplicadas (rollback completo)
-- 🌳 **Suporte Profundo**: Funciona com estruturas aninhadas complexas
-- ✅ **100% Testado**: 157 testes passando, 0 falhas
-- 🔄 **Git-like**: Histórico completo forward/backward
-- 🎯 **Idempotente**: Aplicar diff múltiplas vezes não causa problemas
-- 🌪️ **Suporta Caos**: Mix de strings, números, objetos, null - vida real!
+const modified = {
+  users: [
+    { id: 2, name: "Bob", role: "admin" },  // Bob promoted + moved to top
+    { id: 1, name: "Alice", role: "admin" }  // Alice promoted
+  ]
+};
 
-## Instalação
+_.merge(original, modified);
+// ❌ Result: Overwrites entire array or merges by index
+// Can't detect: moves, reordering, or track objects by identity
+```
+
+**The fundamental issue:** Standard merge tools treat arrays as positional data structures, not collections of identified objects.
+
+## The Solution
+
+**json-myers** uses the Myers diff algorithm (same as Git) with smart object tracking to generate **minimal, semantically-aware patches** that understand array operations:
+
+```javascript
+import { diffJson, patchJson } from 'json-myers';
+
+const diff = diffJson(original, modified);
+// {
+//   users: {
+//     $__arrayOps: [
+//       { type: "move", from: 1, to: 0, item: "#2" }  // Bob moved to top
+//     ],
+//     "1": { role: "admin" },  // Alice role updated
+//     "2": { role: "admin" }   // Bob role updated
+//   }
+// }
+
+const result = patchJson(original, diff);
+// ✅ Perfect reconstruction: moves + updates applied correctly
+```
+
+### What Makes This Possible
+
+1. **Myers Algorithm**: Mathematically optimal diff (same as Git uses for files)
+2. **Smart Keys**: Tracks objects by `id`/`key` instead of array position
+3. **Semantic Operations**: Understands `move`, not just `remove + add`
+4. **Deep Merging**: Recursively patches nested objects at specific positions
+
+This enables **true collaborative editing**, **conflict-free synchronization**, and **precise state management** - things impossible with traditional merge tools.
+
+## Key Features
+
+- 🚀 **High Performance**: Optimized Myers O(ND) algorithm (same as Git)
+- 🔄 **Move Detection**: Identifies when items are moved in arrays
+- 🔑 **Smart Keys**: Tracks objects by `id`/`key` (supports numeric IDs)
+- 🛡️ **Anti-Collision**: Automatic escaping prevents string/key conflicts
+- 📦 **Minimal Patches**: Generates only necessary differences
+- 🔙 **Reversible**: Full undo/redo support
+- 🌳 **Deep Support**: Works with complex nested structures
+- ✅ **100% Tested**: 157 tests passing, 0 failures
+- 🎯 **Idempotent**: Safe to apply diffs multiple times
+
+## Installation
 
 ```bash
 npm install json-myers
-# ou
+# or
 yarn add json-myers
-# ou
+# or
 pnpm add json-myers
 ```
 
-## 🆕 Novidades v1.0.0-rc
+## How to Use
 
-### **Sistema de Escape Anti-Colisão**
-
-Previne colisões entre strings literais e smart keys automaticamente:
-
-```javascript
-const data = [
-  "#user",           // String literal
-  { key: "user" }    // Objeto com key → gera "#user"
-];
-
-// ❌ SEM escape: ambos seriam "#user" → COLISÃO!
-// ✅ COM escape: "#user" vira "\#user" → SEM COLISÃO!
-
-const diff = diffJson(original, modified);
-// Sistema de escape/unescape totalmente transparente!
-```
-
-### **Suporte a IDs Numéricos**
-
-```javascript
-// ✅ Funciona automaticamente!
-const users = [
-  { id: 1, name: "Alice" },  // ID numérico
-  { id: 2, name: "Bob" }
-];
-
-const diff = diffJson(users, updated);
-// Smart keys rastreia por "#1" e "#2" automaticamente
-```
-
-**100% compatível** com código existente!
-
-## Como Usar
-
-### Exemplo Básico
+### Basic Example
 
 ```javascript
 import { diffJson, patchJson } from 'json-myers';
 
 const original = {
-  name: "João",
+  name: "John",
   age: 30,
-  hobbies: ["leitura", "música"]
+  hobbies: ["reading", "music"]
 };
 
 const modified = {
-  name: "João Silva",
+  name: "John Silva",
   age: 30,
-  hobbies: ["leitura", "música", "esportes"],
-  city: "São Paulo"
+  hobbies: ["reading", "music", "sports"],
+  city: "New York"
 };
 
-// Calcular diferenças
+// Calculate differences
 const diff = diffJson(original, modified);
 // {
-//   name: "João Silva",
+//   name: "John Silva",
 //   hobbies: {
 //     "$__arrayOps": [
-//       { type: "add", index: 2, item: "esportes" }
+//       { type: "add", index: 2, item: "sports" }
 //     ]
 //   },
-//   city: "São Paulo"
+//   city: "New York"
 // }
 
-// Aplicar diferenças
+// Apply differences
 const result = patchJson(original, diff);
 // result === modified
 ```
 
-### Trabalhando com Arrays
+### Working with Arrays
 
 ```javascript
-// Arrays simples
+// Simple arrays
 const diff1 = diffJson([1, 2, 3], [1, 3, 4]);
 // {
 //   "$__arrayOps": [
@@ -117,7 +136,7 @@ const diff1 = diffJson([1, 2, 3], [1, 3, 4]);
 //   ]
 // }
 
-// Detecção de movimentação
+// Move detection
 const diff2 = diffJson(["A", "B", "C"], ["B", "C", "A"]);
 // {
 //   "$__arrayOps": [
@@ -126,7 +145,7 @@ const diff2 = diffJson(["A", "B", "C"], ["B", "C", "A"]);
 // }
 ```
 
-### Smart Keys - Arrays de Objetos (com IDs numéricos!)
+### Smart Keys - Object Arrays (with numeric IDs!)
 
 ```javascript
 const users1 = [
@@ -135,9 +154,9 @@ const users1 = [
 ];
 
 const users2 = [
-  { id: 2, name: "Bob", role: "admin" },    // Bob promovido
-  { id: 1, name: "Alice", role: "admin" },  // Alice mudou de posição
-  { id: 3, name: "Carol", role: "user" }    // Carol adicionada
+  { id: 2, name: "Bob", role: "admin" },    // Bob promoted
+  { id: 1, name: "Alice", role: "admin" },  // Alice moved position
+  { id: 3, name: "Carol", role: "user" }    // Carol added
 ];
 
 const diff = diffJson(users1, users2);
@@ -146,14 +165,14 @@ const diff = diffJson(users1, users2);
 //     { type: "move", from: 0, to: 1, item: "#1" },  // Alice move
 //     { type: "add", index: 2, key: "3" }             // Carol add
 //   ],
-//   "2": { role: "admin" },  // Mudança em Bob (id: 2)
-//   "3": { name: "Carol", role: "user" }  // Carol nova (id não duplicado)
+//   "2": { role: "admin" },  // Change in Bob (id: 2)
+//   "3": { name: "Carol", role: "user" }  // Carol new (id not duplicated)
 // }
 
-// ✨ IDs numéricos são automaticamente convertidos para strings nas keys!
+// ✨ Numeric IDs are automatically converted to strings in keys!
 ```
 
-### Removendo Propriedades
+### Removing Properties
 
 ```javascript
 const diff = diffJson(
@@ -164,18 +183,18 @@ const diff = diffJson(
 //   b: { "$__remove": true }
 // }
 
-// Aplicar remoção
+// Apply removal
 const result = patchJson({ a: 1, b: 2, c: 3 }, diff);
 // { a: 1, c: 3 }
 ```
 
-### Diffs Profundos
+### Deep Diffs
 
 ```javascript
 const state1 = {
   user: {
     profile: {
-      name: "João",
+      name: "John",
       settings: {
         theme: "light",
         notifications: true
@@ -187,11 +206,11 @@ const state1 = {
 const state2 = {
   user: {
     profile: {
-      name: "João",
+      name: "John",
       settings: {
         theme: "dark",
         notifications: true,
-        language: "pt-BR"
+        language: "en-US"
       }
     }
   }
@@ -203,31 +222,31 @@ const diff = diffJson(state1, state2);
 //     profile: {
 //       settings: {
 //         theme: "dark",
-//         language: "pt-BR"
+//         language: "en-US"
 //       }
 //     }
 //   }
 // }
 ```
 
-## API Completa
+## Complete API
 
 ### diffJson(original, modified)
 
-Calcula a diferença entre dois valores JSON.
+Calculates the difference between two JSON values.
 
 ```typescript
 function diffJson(original: any, modified: any): any
 ```
 
-**Retornos especiais:**
-- `{}`: Nenhuma mudança
-- Valor direto: Quando o tipo muda completamente
-- Objeto com mudanças: Para objetos e arrays
+**Special returns:**
+- `{}`: No changes
+- Direct value: When the type changes completely
+- Object with changes: For objects and arrays
 
 ### patchJson(base, diff)
 
-Aplica um diff a um valor base.
+Applies a diff to a base value.
 
 ```typescript
 function patchJson(base: any, diff: any): any
@@ -235,10 +254,10 @@ function patchJson(base: any, diff: any): any
 
 ### myersDiff(arrayA, arrayB)
 
-Calcula diff básico entre dois arrays usando algoritmo de Myers.
+Calculates basic diff between two arrays using Myers algorithm.
 
 ```typescript
-type Operation = 
+type Operation =
   | { type: "add", index: number, item: any }
   | { type: "remove", index: number, item: any }
 
@@ -247,10 +266,10 @@ function myersDiff(a: any[], b: any[]): Operation[]
 
 ### myersDiffOptimization(operations)
 
-Otimiza operações de diff detectando movimentações.
+Optimizes diff operations by detecting moves.
 
 ```typescript
-type OptimizedOperation = Operation | 
+type OptimizedOperation = Operation |
   { type: "move", from: number, to: number, item: any }
 
 function myersDiffOptimization(ops: Operation[]): OptimizedOperation[]
@@ -258,69 +277,69 @@ function myersDiffOptimization(ops: Operation[]): OptimizedOperation[]
 
 ### convertJsonMyersToGitDiff(lines, operations, filename)
 
-Converte operações de diff para formato unified diff do Git.
+Converts diff operations to Git unified diff format.
 
 ```typescript
 function convertJsonMyersToGitDiff(
-  lines: string[], 
-  operations: Operation[], 
+  lines: string[],
+  operations: Operation[],
   filename: string
 ): string
 ```
 
-## Formatos de Diff
+## Diff Formats
 
-### Operações de Array
+### Array Operations
 
 ```javascript
 {
   "$__arrayOps": [
-    { type: "add", index: 2, item: "novo" },
-    { type: "remove", index: 0, item: "antigo" },
-    { type: "move", from: 1, to: 3, item: "movido" }
+    { type: "add", index: 2, item: "new" },
+    { type: "remove", index: 0, item: "old" },
+    { type: "move", from: 1, to: 3, item: "moved" }
   ]
 }
 ```
 
-### Modificações com Smart Keys
+### Modifications with Smart Keys
 
 ```javascript
 {
   "$__arrayOps": [
     { type: "move", from: 0, to: 2, item: "#user-1" }
   ],
-  "user-1": {               // mudanças no objeto com key="user-1"
-    name: "Nome Atualizado"
+  "user-1": {               // changes in object with key="user-1"
+    name: "Updated Name"
   },
-  "user-2": {               // mudanças no objeto com key="user-2"
-    email: "novo@email.com"
+  "user-2": {               // changes in object with key="user-2"
+    email: "new@email.com"
   }
 }
 ```
 
-### Remoção de Propriedade
+### Property Removal
 
 ```javascript
 {
-  propriedade: { "$__remove": true }
+  property: { "$__remove": true }
 }
 ```
 
-## Casos de Uso
+## Use Cases
 
-### 1. **Sincronização de Estado**
+### 1. **State Synchronization**
 
 ```javascript
-// Cliente envia apenas mudanças
+// Client sends only changes
 const localState = getLocalState();
 const remoteState = await fetchRemoteState();
 const diff = diffJson(remoteState, localState);
 
-// Servidor aplica mudanças
-await sendDiff(diff); // Envia apenas as diferenças
+// Server applies changes
+await sendDiff(diff); // Sends only the differences
 ```
 
-### 2. **Sistema de Undo/Redo**
+### 2. **Undo/Redo System**
 
 ```javascript
 class History {
@@ -329,21 +348,21 @@ class History {
     this.diffs = [];
     this.current = 0;
   }
-  
+
   push(newState) {
     const diff = diffJson(this.states[this.current], newState);
     this.diffs.push(diff);
     this.states.push(newState);
     this.current++;
   }
-  
+
   undo() {
     if (this.current > 0) {
       this.current--;
       return this.states[this.current];
     }
   }
-  
+
   redo() {
     if (this.current < this.states.length - 1) {
       this.current++;
@@ -353,37 +372,37 @@ class History {
 }
 ```
 
-### 3. **Auditoria de Mudanças**
+### 3. **Change Auditing**
 
 ```javascript
-// Registrar todas as mudanças
+// Record all changes
 const auditLog = [];
 
 function updateData(newData) {
   const oldData = getCurrentData();
   const diff = diffJson(oldData, newData);
-  
+
   auditLog.push({
     timestamp: new Date(),
     user: getCurrentUser(),
     changes: diff
   });
-  
+
   saveData(newData);
 }
 ```
 
-### 4. **Colaboração em Tempo Real**
+### 4. **Real-time Collaboration**
 
 ```javascript
-// WebSocket para sincronização
+// WebSocket for synchronization
 socket.on('state-change', (diff) => {
   const currentState = getState();
   const newState = patchJson(currentState, diff);
   setState(newState);
 });
 
-// Enviar mudanças locais
+// Send local changes
 function handleLocalChange(newState) {
   const diff = diffJson(lastSyncedState, newState);
   socket.emit('state-change', diff);
@@ -393,59 +412,59 @@ function handleLocalChange(newState) {
 
 ## Performance
 
-- **Algoritmo de Myers**: O(ND) onde N = tamanho, D = distância de edição
-- **Otimizado para**: Mudanças pequenas em estruturas grandes
-- **Smart Keys**: Reduz complexidade em arrays de objetos
-- **Caching**: IDs de objetos são cacheados durante o diff
+- **Myers Algorithm**: O(ND) where N = size, D = edit distance
+- **Optimized for**: Small changes in large structures
+- **Smart Keys**: Reduces complexity in object arrays
+- **Caching**: Object IDs are cached during diff
 
-## Limitações
+## Limitations
 
-- Não detecta renomeação de propriedades (trata como remove + add)
-- Objetos circulares não são suportados
-- Arrays muito grandes podem ter performance degradada no pior caso
-- Ordem de aplicação de patches importa para arrays
+- Doesn't detect property renaming (treats as remove + add)
+- Circular objects are not supported
+- Very large arrays may have degraded performance in worst case
+- Order of patch application matters for arrays
 
-## Comparação com Alternativas
+## Comparison with Alternatives
 
 | Feature | json-myers | deep-diff | json-patch |
 |---------|-----------|-----------|------------|
-| Algoritmo | Myers | Recursivo | RFC 6902 |
-| Detecção de movimento | ✅ | ❌ | ❌ |
+| Algorithm | Myers | Recursive | RFC 6902 |
+| Move detection | ✅ | ❌ | ❌ |
 | Smart Keys | ✅ | ❌ | ❌ |
-| Formato de saída | Customizado | Customizado | JSON Patch |
-| Performance | Alta | Média | Média |
-| Tamanho do diff | Mínimo | Médio | Grande |
+| Output format | Custom | Custom | JSON Patch |
+| Performance | High | Medium | Medium |
+| Diff size | Minimal | Medium | Large |
 
 ## Changelog
 
 ### v1.0.0-rc (2025-11-22) ✅
 
-**Status:** Estável - Pronto para Produção
+**Status:** Stable - Production Ready
 
 **Bug Fixes:**
-- 🐛 Corrigido bug crítico de duplicação ao aplicar moves após removes com smart keys
-- 🐛 Corrigido cálculo incorreto de `removedIndices` em `patchJson.ts`
+- 🐛 Fixed critical duplication bug when applying moves after removes with smart keys
+- 🐛 Fixed incorrect `removedIndices` calculation in `patchJson.ts`
 
 **Features:**
-- ✨ Sistema de escape anti-colisão (`"#a"` vs `{key:"a"}`)
-- ✨ Otimização: busca no array base ~10x mais rápida que `JSON.parse()`
-- ✨ Teste completo de histórico Git-like (7 steps forward/backward)
-- ✨ Validação de round-trip perfeita
-- ✨ Validação de idempotência
-- ✨ Suporte a mix caótico de tipos (vida real)
+- ✨ Anti-collision escape system (`"#a"` vs `{key:"a"}`)
+- ✨ Optimization: array base search ~10x faster than `JSON.parse()`
+- ✨ Complete Git-like history test (7 steps forward/backward)
+- ✨ Perfect round-trip validation
+- ✨ Idempotency validation
+- ✨ Support for chaotic type mix (real life)
 
 **Tests:**
-- ✅ 157/157 testes passando (100%)
-- ✅ 0 testes falhando
-- ✅ 0 testes skipados
-- ✅ 5 novos testes de edge-case de colisão
-- ✅ Cobertura completa de casos críticos
+- ✅ 157/157 tests passing (100%)
+- ✅ 0 tests failing
+- ✅ 0 tests skipped
+- ✅ 5 new edge-case collision tests
+- ✅ Complete coverage of critical cases
 
 **Breaking Changes:**
-- Nenhum! 100% compatível com versões anteriores
+- None! 100% compatible with previous versions
 
 ---
 
-## Licença
+## License
 
 MIT © 2025 Anderson D. Rosa
