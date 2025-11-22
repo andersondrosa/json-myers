@@ -1,11 +1,19 @@
 # json-myers
 
-[![Tests](https://img.shields.io/badge/tests-157%2F157%20passing-brightgreen)](https://github.com/andersondrosa/json-myers)
-[![Coverage](https://img.shields.io/badge/coverage-100%25%20active-brightgreen)](https://github.com/andersondrosa/json-myers)
-[![Status](https://img.shields.io/badge/status-stable-green)](https://github.com/andersondrosa/json-myers)
-[![Version](https://img.shields.io/badge/version-1.0.0--rc-blue)](https://github.com/andersondrosa/json-myers)
+<p align="center">
+  <img src="./public/jason-myers.png" alt="JSON Myers" width="600">
+</p>
 
-**The first JSON diff/patch library that actually understands arrays.**
+<p align="center">
+  <a href="https://github.com/andersondrosa/json-myers"><img src="https://img.shields.io/badge/tests-157%2F157%20passing-brightgreen" alt="Tests"></a>
+  <a href="https://github.com/andersondrosa/json-myers"><img src="https://img.shields.io/badge/coverage-100%25%20active-brightgreen" alt="Coverage"></a>
+  <a href="https://github.com/andersondrosa/json-myers"><img src="https://img.shields.io/badge/status-stable-green" alt="Status"></a>
+  <a href="https://www.npmjs.com/package/json-myers"><img src="https://img.shields.io/npm/v/json-myers" alt="npm version"></a>
+</p>
+
+<p align="center">
+  <strong>The first JSON diff/patch library that actually understands arrays.</strong>
+</p>
 
 ## The Problem
 

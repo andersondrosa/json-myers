@@ -1,6 +1,6 @@
 {
   "name": "json-myers",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "High-performance JSON diff/patch library using Myers algorithm with move detection and smart keys support",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
