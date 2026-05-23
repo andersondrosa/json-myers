@@ -1,32 +1,45 @@
+import type { Diff } from "../types";
 import { isPrimitiveDiff, primitiveDiff } from "./primitives";
 import { diffArray } from "./diffArray";
 import { diffObject } from "./diffObject";
 
 /**
- * Cria um diff entre dois valores JSON (qualquer profundidade).
+ * Computa o diff mínimo entre dois valores JSON de qualquer profundidade.
  *
- * Regras:
- * - Se ambos forem primitivos: retorna `{}` se forem iguais, ou `modified` se forem diferentes.
- * - Se forem arrays: aplica algoritmo de Myers para detectar mudanças de posição/adicionais/removidos.
- * - Se forem objetos: compara chave a chave e gera subdiffs.
+ * - Primitivos iguais → `{}`
+ * - Primitivos diferentes (ou mudança de tipo) → retorna `modified` integral
+ * - Arrays vs arrays → Myers + detecção de moves + smart keys
+ * - Objetos vs objetos → diff chave-a-chave recursivo
+ * - Tipos divergentes (object↔array) → retorna `modified` integral (R2)
  *
- * Retorna um JSON contendo apenas as diferenças necessárias para transformar `original` em `modified`.
+ * O diff é **JSON puro** e pode ser serializado livremente.
  *
- * @param original Valor original (objeto, array ou primitivo)
- * @param modified Valor modificado
- * @returns Diff aplicável ou `{}` se idêntico
+ * @param original Valor de partida.
+ * @param modified Valor de destino.
+ * @returns Diff aplicável via `patchJson()`, ou `{}` se não houver mudanças.
+ *
+ * @example
+ * diffJson({ a: 1 }, { a: 2 });           // { a: 2 }
+ * diffJson([1, 2, 3], [1, 3, 4]);          // { $__arrayOps: [...] }
+ * diffJson({ a: 1 }, {});                  // { a: { $__remove: true } }
+ * diffJson({ a: 1 }, [9]);                 // [9]  (R2: tipo mudou)
  */
-export function diffJson(original: any, modified: any): any {
-  // Caso primitivo ou nulo: compara diretamente
+export function diffJson(original: unknown, modified: unknown): Diff {
   if (isPrimitiveDiff(original, modified)) {
     return primitiveDiff(original, modified);
   }
 
-  // Caso arrays: aplica myersDiff + lógica especial de objetos com chave
-  if (Array.isArray(original) && Array.isArray(modified)) {
-    return diffArray(original, modified);
+  const origIsArray = Array.isArray(original);
+  const modIsArray = Array.isArray(modified);
+
+  // R2: tipos divergentes (object vs array) → modified substitui original
+  if (origIsArray !== modIsArray) {
+    return modified as Diff;
   }
 
-  // Caso objetos simples: compara chave a chave
+  if (origIsArray && modIsArray) {
+    return diffArray(original as any[], modified as any[]);
+  }
+
   return diffObject(original, modified);
 }

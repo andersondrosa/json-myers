@@ -1,0 +1,488 @@
+{
+  "name": "json-myers merge conformance",
+  "version": "2.0.0",
+  "description": "Conformance suite for any JSON merge implementation that claims `json-myers` semantics. Each case is a (base, patch, expected) triple — apply the patch onto the base and the result must equal expected (deep equality). Cases marked `throws: true` must cause patchJson to throw.",
+  "spec": {
+    "rules": [
+      "R1 — Arrays in a patch (without `$__arrayOps`) ALWAYS replace the base array. Never positional/index merge.",
+      "R2 — Type change between base and patch (array↔object↔primitive) → patch replaces base inteiramente.",
+      "R3 — Structural recursion only in (object, object) pairs whose patch is NOT itself an `$__arrayOps` object.",
+      "R4 — `$__arrayOps` is the structural-array marker: when the patch at a position carries `$__arrayOps`, it expresses array operations (add/remove/move) and the base at that position MUST be an array. Otherwise, patchJson MUST throw.",
+      "R5 — `$__remove: true` in a patch position deletes the corresponding key from the merged object."
+    ]
+  },
+  "cases": [
+    {
+      "id": "obj.empty-empty",
+      "category": "object-merge",
+      "description": "Two empty objects → empty object",
+      "base": {},
+      "patch": {},
+      "expected": {}
+    },
+    {
+      "id": "obj.additive",
+      "category": "object-merge",
+      "description": "Patch adds new key",
+      "base": { "a": 1 },
+      "patch": { "b": 2 },
+      "expected": { "a": 1, "b": 2 }
+    },
+    {
+      "id": "obj.override",
+      "category": "object-merge",
+      "description": "Patch overrides existing key with a primitive",
+      "base": { "a": 1 },
+      "patch": { "a": 2 },
+      "expected": { "a": 2 }
+    },
+    {
+      "id": "obj.nested-additive",
+      "category": "object-merge",
+      "description": "Recursive merge — additive at nested level",
+      "base": { "a": { "x": 1 } },
+      "patch": { "a": { "y": 2 } },
+      "expected": { "a": { "x": 1, "y": 2 } }
+    },
+    {
+      "id": "obj.nested-override",
+      "category": "object-merge",
+      "description": "Recursive merge — override at nested level",
+      "base": { "a": { "x": 1 } },
+      "patch": { "a": { "x": 9 } },
+      "expected": { "a": { "x": 9 } }
+    },
+    {
+      "id": "obj.deeply-nested",
+      "category": "object-merge",
+      "description": "Three-level nested recursion",
+      "base": { "a": { "b": { "c": 1 } } },
+      "patch": { "a": { "b": { "d": 2 } } },
+      "expected": { "a": { "b": { "c": 1, "d": 2 } } }
+    },
+    {
+      "id": "obj.base-empty",
+      "category": "object-merge",
+      "description": "Empty base, full patch — patch wins",
+      "base": {},
+      "patch": { "a": 1, "b": 2 },
+      "expected": { "a": 1, "b": 2 }
+    },
+    {
+      "id": "obj.patch-empty",
+      "category": "object-merge",
+      "description": "Full base, empty patch — base preserved",
+      "base": { "a": 1, "b": 2 },
+      "patch": {},
+      "expected": { "a": 1, "b": 2 }
+    },
+
+    {
+      "id": "arr.replace-shorter",
+      "category": "array-replace",
+      "description": "R1 — Shorter patch array replaces longer base array",
+      "base": ["x", "y", "z"],
+      "patch": ["w"],
+      "expected": ["w"]
+    },
+    {
+      "id": "arr.replace-longer",
+      "category": "array-replace",
+      "description": "R1 — Longer patch array replaces shorter base array",
+      "base": ["x"],
+      "patch": ["a", "b", "c"],
+      "expected": ["a", "b", "c"]
+    },
+    {
+      "id": "arr.replace-same-length",
+      "category": "array-replace",
+      "description": "R1 — Same-length arrays — patch wins inteiramente",
+      "base": ["x", "y"],
+      "patch": ["a", "b"],
+      "expected": ["a", "b"]
+    },
+    {
+      "id": "arr.replace-base-empty",
+      "category": "array-replace",
+      "description": "R1 — Base empty, patch non-empty",
+      "base": [],
+      "patch": ["a"],
+      "expected": ["a"]
+    },
+    {
+      "id": "arr.replace-patch-empty",
+      "category": "array-replace",
+      "description": "R1 — Base non-empty, patch empty — result is empty array",
+      "base": ["a", "b"],
+      "patch": [],
+      "expected": []
+    },
+    {
+      "id": "arr.replace-nested-1-level",
+      "category": "array-replace",
+      "description": "R1 — Array under one object level",
+      "base": { "list": ["x", "y"] },
+      "patch": { "list": ["w"] },
+      "expected": { "list": ["w"] }
+    },
+    {
+      "id": "arr.replace-nested-2-levels",
+      "category": "array-replace",
+      "description": "R1 — Array under two object levels",
+      "base": { "a": { "list": ["x", "y", "z"] } },
+      "patch": { "a": { "list": ["w"] } },
+      "expected": { "a": { "list": ["w"] } }
+    },
+    {
+      "id": "arr.replace-of-objects",
+      "category": "array-replace",
+      "description": "R1 — Arrays of objects without ids — replace, NOT recursive merge by index",
+      "base": [{ "a": 1 }, { "b": 2 }],
+      "patch": [{ "c": 3 }],
+      "expected": [{ "c": 3 }]
+    },
+    {
+      "id": "arr.replace-of-primitives",
+      "category": "array-replace",
+      "description": "R1 — Arrays of primitives — replace",
+      "base": [1, 2, 3],
+      "patch": ["a"],
+      "expected": ["a"]
+    },
+    {
+      "id": "arr.replace-mixed-types",
+      "category": "array-replace",
+      "description": "R1 — Arrays of mixed types — replace",
+      "base": [1, "two", { "n": 3 }],
+      "patch": [true, null],
+      "expected": [true, null]
+    },
+
+    {
+      "id": "type.array-to-object-nested",
+      "category": "type-change",
+      "description": "R2 — Base has array at key, patch has object at same key (no $__arrayOps) → patch wins",
+      "base": { "list": [1, 2] },
+      "patch": { "list": { "x": 1 } },
+      "expected": { "list": { "x": 1 } }
+    },
+    {
+      "id": "type.object-to-array-nested",
+      "category": "type-change",
+      "description": "R2 — Base has object at key, patch has array at same key → patch wins",
+      "base": { "list": { "x": 1 } },
+      "patch": { "list": [1, 2] },
+      "expected": { "list": [1, 2] }
+    },
+    {
+      "id": "type.object-to-primitive-nested",
+      "category": "type-change",
+      "description": "R2 — Object → primitive",
+      "base": { "a": { "x": 1 } },
+      "patch": { "a": 42 },
+      "expected": { "a": 42 }
+    },
+    {
+      "id": "type.array-to-primitive-nested",
+      "category": "type-change",
+      "description": "R2 — Array → primitive",
+      "base": { "a": [1, 2] },
+      "patch": { "a": 42 },
+      "expected": { "a": 42 }
+    },
+    {
+      "id": "type.primitive-to-object-nested",
+      "category": "type-change",
+      "description": "R2 — Primitive → object",
+      "base": { "a": 1 },
+      "patch": { "a": { "x": 9 } },
+      "expected": { "a": { "x": 9 } }
+    },
+    {
+      "id": "type.primitive-to-array-nested",
+      "category": "type-change",
+      "description": "R2 — Primitive → array",
+      "base": { "a": 1 },
+      "patch": { "a": [9] },
+      "expected": { "a": [9] }
+    },
+    {
+      "id": "type.top.array-to-object",
+      "category": "type-change",
+      "description": "R2 top-level — Base is array, patch is object → patch wins",
+      "base": [1, 2],
+      "patch": { "a": 1 },
+      "expected": { "a": 1 }
+    },
+    {
+      "id": "type.top.object-to-array",
+      "category": "type-change",
+      "description": "R2 top-level — Base is object, patch is array → patch wins",
+      "base": { "a": 1 },
+      "patch": [9],
+      "expected": [9]
+    },
+    {
+      "id": "type.top.array-to-primitive",
+      "category": "type-change",
+      "description": "R2 top-level — Base is array, patch is primitive → patch wins",
+      "base": [1, 2],
+      "patch": 99,
+      "expected": 99
+    },
+    {
+      "id": "type.top.object-to-primitive",
+      "category": "type-change",
+      "description": "R2 top-level — Base is object, patch is primitive → patch wins",
+      "base": { "a": 1 },
+      "patch": 42,
+      "expected": 42
+    },
+
+    {
+      "id": "null.base-null-patch-object",
+      "category": "null-handling",
+      "description": "Null base + object patch → object wins",
+      "base": null,
+      "patch": { "a": 1 },
+      "expected": { "a": 1 }
+    },
+    {
+      "id": "null.base-object-patch-null",
+      "category": "null-handling",
+      "description": "Object base + null patch → null wins",
+      "base": { "a": 1 },
+      "patch": null,
+      "expected": null
+    },
+    {
+      "id": "null.nested-null-base",
+      "category": "null-handling",
+      "description": "Nested null base, object patch — object wins at that key",
+      "base": { "a": null },
+      "patch": { "a": { "x": 1 } },
+      "expected": { "a": { "x": 1 } }
+    },
+    {
+      "id": "null.nested-null-patch",
+      "category": "null-handling",
+      "description": "Nested object base, null patch — null wins at that key",
+      "base": { "a": { "x": 1 } },
+      "patch": { "a": null },
+      "expected": { "a": null }
+    },
+
+    {
+      "id": "ops.add-at-end",
+      "category": "array-ops",
+      "description": "R4 — $__arrayOps with single add at end",
+      "base": { "list": ["x", "y"] },
+      "patch": {
+        "list": { "$__arrayOps": [{ "type": "add", "index": 2, "item": "z" }] }
+      },
+      "expected": { "list": ["x", "y", "z"] }
+    },
+    {
+      "id": "ops.add-at-start",
+      "category": "array-ops",
+      "description": "R4 — $__arrayOps with single add at start",
+      "base": { "list": ["b", "c"] },
+      "patch": {
+        "list": { "$__arrayOps": [{ "type": "add", "index": 0, "item": "a" }] }
+      },
+      "expected": { "list": ["a", "b", "c"] }
+    },
+    {
+      "id": "ops.remove-middle",
+      "category": "array-ops",
+      "description": "R4 — $__arrayOps with single remove",
+      "base": { "list": ["x", "y", "z"] },
+      "patch": {
+        "list": {
+          "$__arrayOps": [{ "type": "remove", "index": 1, "item": "y" }]
+        }
+      },
+      "expected": { "list": ["x", "z"] }
+    },
+    {
+      "id": "ops.add-in-empty",
+      "category": "array-ops",
+      "description": "R4 — $__arrayOps adding into empty base",
+      "base": { "list": [] },
+      "patch": {
+        "list": { "$__arrayOps": [{ "type": "add", "index": 0, "item": "a" }] }
+      },
+      "expected": { "list": ["a"] }
+    },
+    {
+      "id": "ops.remove-then-add",
+      "category": "array-ops",
+      "description": "R4 — Combined remove + add in single $__arrayOps",
+      "base": { "list": ["a", "b", "c"] },
+      "patch": {
+        "list": {
+          "$__arrayOps": [
+            { "type": "remove", "index": 1, "item": "b" },
+            { "type": "add", "index": 1, "item": "x" }
+          ]
+        }
+      },
+      "expected": { "list": ["a", "x", "c"] }
+    },
+    {
+      "id": "ops.move",
+      "category": "array-ops",
+      "description": "R4 — $__arrayOps with move operation",
+      "base": { "list": ["A", "B", "C"] },
+      "patch": {
+        "list": {
+          "$__arrayOps": [{ "type": "move", "from": 0, "to": 2, "item": "A" }]
+        }
+      },
+      "expected": { "list": ["B", "C", "A"] }
+    },
+
+    {
+      "id": "smart-keys.move-by-key",
+      "category": "array-ops-smart-keys",
+      "description": "R4 — Smart key move using `key` field identity",
+      "base": [
+        { "key": "1", "name": "a" },
+        { "key": "2", "name": "b" }
+      ],
+      "patch": {
+        "$__arrayOps": [
+          { "type": "remove", "key": "1" },
+          { "type": "add", "key": "1", "index": 1 }
+        ]
+      },
+      "expected": [
+        { "key": "2", "name": "b" },
+        { "key": "1", "name": "a" }
+      ]
+    },
+    {
+      "id": "smart-keys.nested-update-after-move",
+      "category": "array-ops-smart-keys",
+      "description": "R4 — Smart key with nested object update in same patch",
+      "base": [
+        { "key": "1", "name": "a" },
+        { "key": "2", "name": "b" }
+      ],
+      "patch": {
+        "$__arrayOps": [
+          { "type": "remove", "key": "1" },
+          { "type": "add", "key": "3", "index": 1 }
+        ],
+        "2": { "name": "b2" },
+        "3": { "name": "c" }
+      },
+      "expected": [
+        { "key": "2", "name": "b2" },
+        { "key": "3", "name": "c" }
+      ]
+    },
+
+    {
+      "id": "remove.simple",
+      "category": "remove-property",
+      "description": "R5 — $__remove on top-level key",
+      "base": { "a": 1, "b": 2 },
+      "patch": { "b": { "$__remove": true } },
+      "expected": { "a": 1 }
+    },
+    {
+      "id": "remove.nested",
+      "category": "remove-property",
+      "description": "R5 — $__remove on nested key",
+      "base": { "a": { "x": 1, "y": 2 } },
+      "patch": { "a": { "y": { "$__remove": true } } },
+      "expected": { "a": { "x": 1 } }
+    },
+    {
+      "id": "remove.alongside-add",
+      "category": "remove-property",
+      "description": "R5 — $__remove + add new key in same patch",
+      "base": { "a": 1, "b": 2 },
+      "patch": { "b": { "$__remove": true }, "c": 3 },
+      "expected": { "a": 1, "c": 3 }
+    },
+
+    {
+      "id": "realistic.deep-object-no-array",
+      "category": "realistic-chain",
+      "description": "Realistic merge — deep object update without arrays",
+      "base": { "user": { "profile": { "name": "Ana", "age": 30 } } },
+      "patch": {
+        "user": { "profile": { "age": 31, "email": "x@y" } }
+      },
+      "expected": {
+        "user": {
+          "profile": { "name": "Ana", "age": 31, "email": "x@y" }
+        }
+      }
+    },
+    {
+      "id": "realistic.deep-object-with-array-replace",
+      "category": "realistic-chain",
+      "description": "Realistic merge — array under nested object is replaced (no ops declared)",
+      "base": {
+        "config": { "tags": ["a", "b", "c"], "flags": { "debug": false } }
+      },
+      "patch": {
+        "config": { "tags": ["x"], "flags": { "debug": true } }
+      },
+      "expected": {
+        "config": { "tags": ["x"], "flags": { "debug": true } }
+      }
+    },
+    {
+      "id": "realistic.array-ops-with-sibling-object",
+      "category": "realistic-chain",
+      "description": "Realistic merge — $__arrayOps on one field, plain object merge on sibling",
+      "base": {
+        "tags": ["a", "b"],
+        "user": { "name": "Ana" }
+      },
+      "patch": {
+        "tags": { "$__arrayOps": [{ "type": "add", "index": 2, "item": "c" }] },
+        "user": { "age": 30 }
+      },
+      "expected": {
+        "tags": ["a", "b", "c"],
+        "user": { "name": "Ana", "age": 30 }
+      }
+    },
+
+    {
+      "id": "error.array-ops-on-object-base",
+      "category": "array-ops-error",
+      "description": "Patch declares $__arrayOps but base at that position is an object — this is structural inconsistency: $__arrayOps is semantically an operation over arrays, the diff generator never produces it for non-array values. patchJson MUST throw.",
+      "base": { "list": { "x": 1 } },
+      "patch": {
+        "list": { "$__arrayOps": [{ "type": "add", "index": 0, "item": "a" }] }
+      },
+      "throws": true
+    },
+    {
+      "id": "error.array-ops-on-primitive-base",
+      "category": "array-ops-error",
+      "description": "Patch declares $__arrayOps but base at that position is a primitive — same fail-fast rule applies.",
+      "base": { "list": 42 },
+      "patch": {
+        "list": { "$__arrayOps": [{ "type": "add", "index": 0, "item": "a" }] }
+      },
+      "throws": true
+    },
+    {
+      "id": "error.array-ops-on-missing-base",
+      "category": "array-ops-error",
+      "description": "Patch declares $__arrayOps for a key that doesn't exist in base — base is effectively `undefined`, not an array. Fail-fast. (To create an array from scratch, use a literal array in the patch: `{ list: [\"a\"] }`.)",
+      "base": {},
+      "patch": {
+        "list": { "$__arrayOps": [{ "type": "add", "index": 0, "item": "a" }] }
+      },
+      "throws": true
+    }
+  ]
+}

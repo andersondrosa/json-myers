@@ -1,8 +1,28 @@
-export type DiffOp<T> =
-  | { type: "add"; index: number; item: T }
-  | { type: "remove"; index: number; item: T };
+import type { MyersOp } from "../types";
 
-export function myersDiff<T>(a: T[], b: T[]): DiffOp<T>[] {
+/** @deprecated Use `MyersOp` from the package root. */
+export type DiffOp<T> = MyersOp<T>;
+
+/**
+ * Algoritmo de Myers O(N·D) — calcula o menor script de edição entre dois
+ * arrays como uma sequência de `add` e `remove`.
+ *
+ * Convenção de índices:
+ * - `remove.index` é a posição no array **original** (`a`)
+ * - `add.index` é a posição no array **final** (`b`)
+ *
+ * @param a Array de origem.
+ * @param b Array de destino.
+ * @returns Lista de operações cruas (sem detecção de move).
+ *
+ * @example
+ * myersDiff(["a","b","c"], ["b","c","a"]);
+ * // [
+ * //   { type: "remove", index: 0, item: "a" },
+ * //   { type: "add",    index: 2, item: "a" }
+ * // ]
+ */
+export function myersDiff<T>(a: T[], b: T[]): MyersOp<T>[] {
   const N = a.length,
     M = b.length;
   const max = N + M;
@@ -38,10 +58,10 @@ function backtrack<T>(
   trace: Record<number, number>[],
   a: T[],
   b: T[],
-): DiffOp<T>[] {
+): MyersOp<T>[] {
   let x = a.length,
     y = b.length;
-  const result: DiffOp<T>[] = [];
+  const result: MyersOp<T>[] = [];
 
   for (let d = trace.length - 1; d >= 0; d--) {
     const v = trace[d];
@@ -77,9 +97,18 @@ function backtrack<T>(
   return result;
 }
 
-// =============================================================================
-
-export function applyMyersDiff<T>(original: T[], diff: DiffOp<T>[]): T[] {
+/**
+ * Aplica uma lista de operações Myers a um array, retornando um novo array.
+ *
+ * Estratégia: removes do maior para o menor índice, depois adds do menor para
+ * o maior — única ordem que respeita os referenciais (`remove` em índices do
+ * original, `add` em índices do final).
+ *
+ * @param original Array de partida (não é mutado).
+ * @param diff Operações a aplicar.
+ * @returns Novo array com as operações aplicadas.
+ */
+export function applyMyersDiff<T>(original: T[], diff: MyersOp<T>[]): T[] {
   let result = [...original];
 
   // Separar operações
@@ -101,9 +130,15 @@ export function applyMyersDiff<T>(original: T[], diff: DiffOp<T>[]): T[] {
   return result;
 }
 
-// =============================================================================
-
-export function rollbackMyersDiff<T>(modified: T[], diff: DiffOp<T>[]): T[] {
+/**
+ * Reverte a aplicação de um diff Myers — dado o array `modified` e o diff
+ * que o produziu, reconstrói o array original.
+ *
+ * @param modified Array depois das operações.
+ * @param diff Operações que geraram `modified` a partir do original.
+ * @returns Array original reconstruído.
+ */
+export function rollbackMyersDiff<T>(modified: T[], diff: MyersOp<T>[]): T[] {
   const result = [...modified];
 
   // Aplica o diff reverso corretamente:

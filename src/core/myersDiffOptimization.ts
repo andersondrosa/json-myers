@@ -1,26 +1,26 @@
-// Tipos básicos
-type MyersDiffOp<T> =
-  | { type: "add"; index: number; item: T }
-  | { type: "remove"; index: number; item: T };
-
-type OptimizedDiffOp<T> =
-  | MyersDiffOp<T>
-  | { type: "move"; from: number; to: number; item: T };
+import type { MyersOp, OptimizedMyersOp } from "../types";
 
 /**
- * Gera operações "move" a partir do Myers diff bruto
+ * Pareia ops de `remove` + `add` do mesmo item em uma única op `move`.
+ *
+ * @param diff Saída crua de `myersDiff()`.
+ * @param canMove Predicate opcional que decide se um item pode ser pareado
+ *   como `move`. Útil para evitar pareamento ambíguo em items duplicados
+ *   (ex.: strings repetidas). Quando omitido, todos os pareamentos são feitos.
+ * @returns Lista de ops com moves detectados, ordenada pelo índice de destino.
  */
 export function myersDiffOptimization<T>(
-  diff: MyersDiffOp<T>[],
-): OptimizedDiffOp<T>[] {
-  const optimized: OptimizedDiffOp<T>[] = [];
+  diff: MyersOp<T>[],
+  canMove?: (item: T) => boolean,
+): OptimizedMyersOp<T>[] {
+  const optimized: OptimizedMyersOp<T>[] = [];
   const removes = diff.filter((op) => op.type === "remove");
   const adds = diff.filter((op) => op.type === "add");
   const matchedRemoves = new Set<number>();
   const matchedAdds = new Set<number>();
 
-  // Identificar pares remove+add que formam moves
   removes.forEach((remOp, remIdx) => {
+    if (canMove && !canMove(remOp.item)) return;
     for (let addIdx = 0; addIdx < adds.length; addIdx++) {
       const addOp = adds[addIdx];
       if (!matchedAdds.has(addIdx) && remOp.item === addOp.item) {
@@ -37,7 +37,6 @@ export function myersDiffOptimization<T>(
     }
   });
 
-  // Adicionar removes e adds não matchados
   removes.forEach((op, idx) => {
     if (!matchedRemoves.has(idx)) optimized.push(op);
   });
@@ -54,12 +53,13 @@ export function myersDiffOptimization<T>(
 }
 
 /**
- * Reverte operações "move" de volta para Myers diff bruto (add/remove)
+ * Inverso de `myersDiffOptimization()`: expande cada `move` de volta para
+ * um par `remove + add`, restaurando o formato cru do Myers.
  */
 export function optimizedDiffToMyersRaw<T>(
-  optimizedDiff: OptimizedDiffOp<T>[],
-): MyersDiffOp<T>[] {
-  const raw: MyersDiffOp<T>[] = [];
+  optimizedDiff: OptimizedMyersOp<T>[],
+): MyersOp<T>[] {
+  const raw: MyersOp<T>[] = [];
 
   optimizedDiff.forEach((op) => {
     if (op.type === "move") {
@@ -70,6 +70,5 @@ export function optimizedDiffToMyersRaw<T>(
     }
   });
 
-  // Ordenar por índice para garantir consistência
   return raw.sort((a, b) => a.index - b.index);
 }

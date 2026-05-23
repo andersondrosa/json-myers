@@ -2,16 +2,19 @@ import { diffJson } from "./diffJson";
 import { isNonEmptyDiff, getKey } from "./utils";
 
 /**
- * Compara profundamente objetos com `key` ou `id` que existem em ambos os arrays.
+ * Computa diffs aninhados entre items que existem em ambos os arrays e
+ * compartilham a mesma smart key (`key` ou `id`).
  *
- * - Prioridade: key > id
- * - Apenas o primeiro item com cada key é considerado.
- * - Objetos duplicados com a mesma key são ignorados.
- * - Se houver diferença interna entre os objetos, o diff é salvo em `result[key]`.
+ * Mutates `result`, acumulando cada diff não-vazio sob a chave correspondente.
  *
- * @param original - Array original
- * @param modified - Array modificado
- * @param result - Objeto onde o diff será acumulado
+ * Regras:
+ * - Prioridade `key` > `id` (via `getKey`)
+ * - Apenas a primeira ocorrência de cada identidade é considerada
+ * - Items sem identidade são ignorados (passam pelo Myers normal em `diffArray`)
+ *
+ * @param original Array de partida.
+ * @param modified Array de destino.
+ * @param result Objeto destino onde diffs aninhados são acumulados.
  */
 export function diffSmartKeys(
   original: any[],

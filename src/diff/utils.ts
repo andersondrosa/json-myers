@@ -1,3 +1,5 @@
+import { ARRAY_OPS_KEY, SMART_KEY_PREFIX } from "../constants";
+
 /**
  * Escapa strings que começam com # ou \ para evitar colisões
  * com smart keys.
@@ -8,9 +10,8 @@
  *   "\\#a"  → "\\\#a"
  *   "normal" → "normal" (sem escape)
  */
-function escapeIdentity(str: string): string {
-  // Se começa com # ou \, adiciona \ no início
-  if (str.startsWith("#") || str.startsWith("\\")) {
+export function escapeIdentity(str: string): string {
+  if (str.startsWith(SMART_KEY_PREFIX) || str.startsWith("\\")) {
     return `\\${str}`;
   }
   return str;
@@ -26,7 +27,6 @@ function escapeIdentity(str: string): string {
  *   "normal" → "normal" (sem unescape)
  */
 export function unescapeIdentity(str: string): string {
-  // Se começa com \, remove o primeiro \
   if (str.startsWith("\\")) {
     return str.slice(1);
   }
@@ -36,7 +36,7 @@ export function unescapeIdentity(str: string): string {
 export function getArrayItemIdentity(item: any): string {
   const key = getKey(item);
   if (key) {
-    return `#${key}`;
+    return `${SMART_KEY_PREFIX}${key}`;
   }
 
   if (typeof item === "object" && item !== null) {
@@ -53,8 +53,8 @@ export function isNonEmptyDiff(value: any): boolean {
   if (typeof value !== "object") return true;
   const keys = Object.keys(value);
   if (keys.length === 0) return false;
-  if (keys.length === 1 && keys[0] === "$__arrayOps") {
-    return value.$__arrayOps.length > 0;
+  if (keys.length === 1 && keys[0] === ARRAY_OPS_KEY) {
+    return value[ARRAY_OPS_KEY].length > 0;
   }
   return true;
 }

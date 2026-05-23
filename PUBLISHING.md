@@ -1,160 +1,92 @@
-# 📦 Guia de Publicação - json-myers
+# Guia de Publicação — json-myers
 
-## ✅ Pré-requisitos
+Passo a passo para publicar uma nova versão no npm.
 
-- [x] Conta no npmjs.com
-- [x] Estar logado no npm: `npm login`
-- [x] Todos os testes passando (146/146) ✅
-- [x] Build funcionando ✅
-- [x] Documentação atualizada ✅
+---
 
-## 🚀 Passos para Publicar
+## Pré-requisitos
 
-### 1. Verificar se está logado no npm
+- Login no npm: `npm whoami` (ou `npm login`)
+- Working tree limpa: `git status`
+- Todos os testes passando: `pnpm test`
+- Typecheck ok: `pnpm typecheck`
+- Build ok: `pnpm build`
 
-```bash
-npm whoami
-```
+---
 
-Se não estiver logado:
-```bash
-npm login
-```
-
-### 2. Verificar o que será publicado
+## Sequência
 
 ```bash
-npm pack --dry-run
-```
-
-Isso mostrará todos os arquivos que serão incluídos no pacote.
-
-### 3. Rodar verificações finais
-
-```bash
+# 1. Garantir que tudo passa
 pnpm typecheck
 pnpm test
 pnpm build
-```
 
-Tudo deve passar sem erros! ✅
+# 2. Atualizar versão (escolha um)
+npm version patch    # 1.0.4 → 1.0.5  (bug fix)
+npm version minor    # 1.0.4 → 1.1.0  (nova feature, sem breaking)
+npm version major    # 1.0.4 → 2.0.0  (breaking change)
 
-### 4. Publicar no npm
+# Isso atualiza package.json + cria tag git automaticamente
 
-```bash
+# 3. Inspecionar o que será publicado
+npm pack --dry-run
+
+# 4. Publicar
 npm publish
+
+# 5. Enviar a tag
+git push
+git push --tags
 ```
 
-Ou com pnpm:
-```bash
-pnpm publish
+O script `prepublishOnly` no `package.json` roda automaticamente `typecheck + test + build` antes de publicar — se algo falhar, a publicação aborta.
+
+---
+
+## O que é incluído no pacote
+
+Definido em `package.json` → `files`:
+
+```json
+"files": ["dist", "public", "README.md", "LICENSE"]
 ```
 
-**Nota:** O script `prepublishOnly` rodará automaticamente antes da publicação:
-- Typecheck
-- Testes
-- Build
+| Incluído | Razão |
+|---|---|
+| `dist/` | Código compilado (CJS + ESM + DTS) |
+| `public/` | Imagem do README (jason-myers.png) |
+| `README.md` | Documentação principal exibida no npmjs.com |
+| `LICENSE` | Licença MIT |
 
-### 5. Verificar a publicação
-
-Acesse: https://www.npmjs.com/package/json-myers
-
-Ou instale em um projeto teste:
-```bash
-npm install json-myers
-```
+**Não incluído**: `src/`, `tests/`, `docs/`, configs. Quem instala recebe apenas o necessário pra usar.
 
 ---
 
-## 📋 Checklist de Publicação
+## Bump de versão (semver)
 
-- [ ] Versão atualizada no `package.json`
-- [ ] CHANGELOG.md atualizado
-- [ ] README.md revisado
-- [ ] Todos os testes passando (146/146)
-- [ ] Build executado sem erros
-- [ ] Git commit e push
-- [ ] Tag criada: `git tag v1.0.0`
-- [ ] Tag enviada: `git push origin v1.0.0`
-- [ ] Publicado no npm
-- [ ] Verificado no npmjs.com
+| De | Para | Quando |
+|---|---|---|
+| **patch** (1.0.4 → 1.0.5) | Bug fix sem mudar API | Correção em comportamento, sem afetar contratos |
+| **minor** (1.0.4 → 1.1.0) | Nova feature aditiva | Novo export, novo parâmetro opcional, nova capacidade |
+| **major** (1.0.4 → 2.0.0) | Breaking change | Mudou assinatura, removeu export, mudou formato de diff |
+
+Histórico recente já justifica um **minor**: `applyArrayOps` deixou de ser exportado em `src/index.ts`. Tecnicamente é breaking de API pública, mas como o uso fora desta lib é improvável, um minor (1.1.0) com nota no changelog é defensável.
 
 ---
 
-## 🔄 Atualizações Futuras
+## Pós-publicação
 
-### Para publicar uma nova versão:
-
-1. **Atualizar versão** (escolha uma):
-   ```bash
-   npm version patch  # 1.0.0 → 1.0.1 (bug fixes)
-   npm version minor  # 1.0.0 → 1.1.0 (new features)
-   npm version major  # 1.0.0 → 2.0.0 (breaking changes)
-   ```
-
-2. **Commit e push**:
-   ```bash
-   git push
-   git push --tags
-   ```
-
-3. **Publicar**:
-   ```bash
-   npm publish
-   ```
+- Confirmar no [npmjs.com/package/json-myers](https://www.npmjs.com/package/json-myers)
+- Verificar tag no GitHub
+- Atualizar README/issues se houver mudança visível para usuários
 
 ---
 
-## 📊 Arquivos Incluídos no Pacote
+## Troubleshooting
 
-De acordo com `package.json` > `files`:
+**`You do not have permission to publish`** — verifique `npm whoami` e se você é o owner do pacote no npm.
 
-```
-✅ dist/                    # Arquivos compilados
-✅ README.md                # Documentação principal
-✅ LICENSE                  # Licença MIT
-✅ docs/ARCHITECTURE.md     # Arquitetura
-✅ docs/MYERS-LOGIC.md      # Lógica do algoritmo
-```
+**`prepublishOnly` falha** — rode manualmente cada comando (`pnpm typecheck`, `pnpm test`, `pnpm build`) e corrija o erro antes de tentar publicar de novo.
 
-**Tamanho estimado:** ~30-40KB (comprimido)
-
----
-
-## 🔒 Segurança
-
-- ✅ Não publicamos código fonte TypeScript (`src/`)
-- ✅ Não publicamos testes (`tests/`)
-- ✅ Não publicamos arquivos de config
-- ✅ Apenas dist + documentação essencial
-
----
-
-## 🐛 Troubleshooting
-
-### Erro: "You do not have permission to publish"
-- Verifique se está logado: `npm whoami`
-- Verifique se o nome do pacote está disponível
-
-### Erro: "Package already exists"
-- O nome `json-myers` já está em uso
-- Escolha outro nome ou publique como scoped: `@seu-usuario/json-myers`
-
-### Erro em prepublishOnly
-- Rode manualmente: `pnpm typecheck && pnpm test && pnpm build`
-- Corrija os erros antes de publicar
-
----
-
-## 📈 Pós-Publicação
-
-1. **Anunciar** nas redes sociais / comunidades
-2. **Monitorar** downloads no npmjs.com
-3. **Responder** issues no GitHub
-4. **Manter** atualizado com bug fixes
-
----
-
-**Versão atual:** 1.0.0
-**Status:** Pronto para publicação! ✅
-**Data:** 2025-11-22
+**Versão já existe no npm** — npm não permite republicar a mesma versão. Bump primeiro.

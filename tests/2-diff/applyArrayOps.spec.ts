@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { myersDiff, applyArrayOps } from "../../src";
+import { myersDiff } from "../../src";
+import { applyArrayOps } from "../../src/diff/applyArrayOps";
 
 describe("applyArrayOps", () => {
   //

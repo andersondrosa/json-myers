@@ -1,5 +1,6 @@
-import { diffJson } from "../diff/diffJson";
-import { isNonEmptyDiff, getKey } from "../diff/utils";
+import { ARRAY_OPS_KEY } from "../constants";
+import { diffJson } from "./diffJson";
+import { isNonEmptyDiff, getKey } from "./utils";
 
 export function applyArrayOps(
   ops: any[],
@@ -8,9 +9,8 @@ export function applyArrayOps(
   modifiedIds: string[],
   result: any,
 ): void {
-  const resultOps = result.$__arrayOps;
+  const resultOps = result[ARRAY_OPS_KEY];
 
-  // 🔍 Conta as keys no original e no modified separadamente
   const countKeys = (arr: any[]) => {
     const map = new Map<string, number>();
     for (const item of arr) {
@@ -25,9 +25,6 @@ export function applyArrayOps(
 
   for (const op of ops) {
     if (op.type === "move") {
-      // Operação de movimentação otimizada
-      const item = op.item.startsWith("#") ? op.item.slice(1) : op.item;
-
       resultOps.push({
         type: "move",
         from: op.from,
@@ -49,7 +46,11 @@ export function applyArrayOps(
     }
 
     if (op.type === "add") {
-      const idx = modifiedIds.indexOf(op.item);
+      // op.index é a posição correta no array `modified` (vem direto do Myers).
+      // Não usar modifiedIds.indexOf(op.item) — em arrays com itens duplicados
+      // (ex. linhas de código com "}" ou "" repetidas), indexOf retornaria
+      // sempre a primeira ocorrência, deslocando o índice gerado.
+      const idx = op.index;
       const item = modified[idx];
       const key = getKey(item);
 

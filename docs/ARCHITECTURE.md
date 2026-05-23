@@ -1,620 +1,224 @@
-# json-myers - Arquitetura da Biblioteca
+# Arquitetura
 
-**Status:** 🚧 Em Desenvolvimento
-**Versão:** 1.0.0-dev
-**Testes:** 118/137 passando (86%)
+Visão geral da estrutura interna de `json-myers`. Para detalhes de componentes específicos, veja os documentos referenciados ao longo do texto.
 
 ---
 
-## 🎯 Visão & Propósito
+## Visão de uma frase
 
-**json-myers** é uma biblioteca de alta performance para diff/patch de JSON que usa o **algoritmo de Myers** (mesmo usado pelo Git) para calcular diferenças mínimas entre estruturas JSON.
-
-### Diferenciais
-
-- **Consciência semântica**: Detecta movimentações, não apenas add/remove
-- **Smart keys**: Rastreia objetos por identidade (`id`/`key`)
-- **Diffs mínimos**: Apenas o que realmente mudou
-- **Reversibilidade**: Suporte completo a undo/redo
-- **Estruturas profundas**: Aninhamento ilimitado
-- **Matematicamente ótimo**: Usa algoritmo provado como mínimo
+`json-myers` é uma biblioteca TypeScript de diff/patch para JSON. O core é o **algoritmo de Myers** rodando sobre uma projeção de identidade dos arrays (smart keys), com pós-processamento que detecta moves e aplica patches aninhados.
 
 ---
 
-## 🏗️ Arquitetura Core
+## Camadas
 
-### Fluxo de Alto Nível
-
-```
-┌─────────────┐
-│ JSON Input  │
-│ (original)  │
-└──────┬──────┘
-       │
-       ├─────────────────────┐
-       │                     │
-       ▼                     ▼
-┌─────────────┐      ┌─────────────┐
-│  diffJson   │      │  patchJson  │
-│   Engine    │      │   Engine    │
-└──────┬──────┘      └──────▲──────┘
-       │                     │
-       │    ┌─────────┐      │
-       └───▶│  DIFF   │──────┘
-            │ (delta) │
-            └─────────┘
-```
-
-### Camadas de Componentes
+A pasta `src/` está organizada em 4 camadas com responsabilidades isoladas:
 
 ```
-┌────────────────────────────────────────────────┐
-│              API PÚBLICA                       │
-│  diffJson(), patchJson(), myersDiff()         │
-└────────────────┬───────────────────────────────┘
-                 │
-┌────────────────┴───────────────────────────────┐
-│           ESTRATÉGIAS DE DIFF                  │
-│  • primitives    (strings, numbers, etc)      │
-│  • diffArray     (algoritmo Myers)            │
-│  • diffObject    (comparação chave-a-chave)   │
-│  • diffSmartKeys (rastreamento por identidade)│
-└────────────────┬───────────────────────────────┘
-                 │
-┌────────────────┴───────────────────────────────┐
-│         CORE DO ALGORITMO MYERS                │
-│  • myersDiff           (add/remove)           │
-│  • myersDiffOptimization (detecta moves)      │
-│  • applyMyersDiff      (aplica operações)     │
-└────────────────┬───────────────────────────────┘
-                 │
-┌────────────────┴───────────────────────────────┐
-│              UTILITÁRIOS                       │
-│  • applyArrayOps  (executa operações)         │
-│  • utils          (identidade, validação)     │
-│  • convertToGitDiff (visualização)            │
-└────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  API pública  (src/index.ts)                            │
+│  diffJson · patchJson · diff · patch · myersDiff · ...  │
+└─────────────────────────────────────────────────────────┘
+            │                              │
+┌───────────┴────────────┐    ┌────────────┴──────────────┐
+│  diff/                 │    │  patch/                   │
+│  Geração de diferenças │    │  Aplicação de patches     │
+│  ──────────────────    │    │  ──────────────────       │
+│  diffJson              │    │  patchJson                │
+│  diffArray             │    │                           │
+│  diffObject            │    │                           │
+│  diffSmartKeys         │    │                           │
+│  applyArrayOps         │    │                           │
+│  primitives            │    │                           │
+│  utils                 │    │                           │
+└────────────┬───────────┘    └────────────┬──────────────┘
+             │                             │
+             └──────────────┬──────────────┘
+                            │
+            ┌───────────────┴───────────────┐
+            │  core/                        │
+            │  Algoritmo Myers base         │
+            │  ──────────────────           │
+            │  myersDiff (O(ND))            │
+            │  applyMyersDiff               │
+            │  rollbackMyersDiff            │
+            │  myersDiffOptimization        │
+            │  optimizedDiffToMyersRaw      │
+            └───────────────────────────────┘
+
+            ┌───────────────────────────────┐
+            │  utils/                       │
+            │  Conversões auxiliares        │
+            │  convertJsonMyersToGitDiff    │
+            └───────────────────────────────┘
+
+            ┌───────────────────────────────┐
+            │  constants.ts                 │
+            │  REMOVE_MARKER · ARRAY_OPS_KEY · SMART_KEY_PREFIX │
+            └───────────────────────────────┘
 ```
+
+### Mapa arquivo → conceito
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `src/core/myersDiff.ts` | Algoritmo Myers O(ND): `myersDiff`, `applyMyersDiff`, `rollbackMyersDiff` |
+| `src/core/myersDiffOptimization.ts` | Pareia `remove + add` do mesmo item em `move`; e o inverso |
+| `src/diff/diffJson.ts` | Entry point — despacha por tipo (primitivo / array / objeto) |
+| `src/diff/diffArray.ts` | Constrói identidades, chama Myers, traduz ops para o formato de diff |
+| `src/diff/diffObject.ts` | Diff chave-a-chave de objetos (com `$__remove` para propriedades removidas) |
+| `src/diff/diffSmartKeys.ts` | Diff aninhado de objetos com mesma identidade em arrays |
+| `src/diff/applyArrayOps.ts` | Traduz ops do Myers (identidades `#key`) para o formato final do diff |
+| `src/diff/primitives.ts` | `isPrimitiveDiff`, `primitiveDiff` |
+| `src/diff/utils.ts` | `getKey`, `getArrayItemIdentity`, `escape/unescapeIdentity`, `isNonEmptyDiff` |
+| `src/patch/patchJson.ts` | Aplicação completa do diff (com ajuste de índices, smart keys, recursão) |
+| `src/utils/convertJsonMyersToGitDiff.ts` | Renderiza array-diff como unified diff (uso opcional, p/ visualização) |
+| `src/constants.ts` | Constantes textuais: `REMOVE_MARKER`, `ARRAY_OPS_KEY`, `SMART_KEY_PREFIX` |
 
 ---
 
-## 📦 Estrutura de Código (4 Camadas)
+## Fluxo de dados
 
-A arquitetura segue o princípio de **separação por responsabilidade**:
+### Geração de diff (`diffJson`)
 
 ```
-src/
-├── index.ts                    # Exports públicos
-├── types.ts                    # Definições TypeScript
-│
-├── core/                     # CAMADA 1: Algoritmo Myers Base
-│   ├── myersDiff.ts            # ✅ Algoritmo Myers correto
-│   └── myersDiffOptimization.ts # ✅ Detecta moves
-│
-├── diff/                     # CAMADA 2: Geração de Diffs
-│   ├── diffJson.ts             # Entry point principal
-│   ├── diffArray.ts            # Comparação de arrays
-│   ├── diffObject.ts           # Comparação de objetos
-│   ├── diffSmartKeys.ts        # Rastreamento por id/key
-│   ├── primitives.ts           # Comparação de primitivos
-│   ├── addRemovedSmartKeys.ts  # Helpers para smart keys
-│   └── utils.ts                # Utilitários
-│
-├── patch/                    # CAMADA 3: Aplicação de Patches
-│   ├── patchJson.ts            # ✅ Aplica diffs corretamente
-│   └── applyArrayOps.ts        # Executor de operações
-│
-└── utils/                    # CAMADA 4: Utilitários
-    ├── convertJsonMyersToGitDiff.ts # Conversão para Git diff
-    └── index.ts                # Exports
+diffJson(a, b)
+  ├─ ambos primitivos?     → primitiveDiff
+  ├─ ambos arrays?         → diffArray
+  │                            ├─ gera identidades (smart keys + escape)
+  │                            ├─ myersDiff(idsA, idsB)
+  │                            ├─ myersDiffOptimization → moves
+  │                            ├─ applyArrayOps → ops finais com #key
+  │                            └─ diffSmartKeys → diffs aninhados por identidade
+  └─ ambos objetos?        → diffObject (recursão via diffJson)
 ```
 
-### Estrutura de Testes (espelha src/)
+### Aplicação de patch (`patchJson`)
+
+```
+patchJson(base, diff)
+  ├─ diff primitivo?       → retorna diff
+  ├─ base é array + $__arrayOps?
+  │     1. removes (maior → menor)
+  │     2. ajusta moves
+  │     3. moves (resolvendo #key, convertendo em remove+add)
+  │     4. adds (menor → maior)
+  │     5. patches aninhados por identidade
+  └─ objeto?               → itera chaves, recursão
+```
+
+Detalhes em [`PATCH_LOGIC.md`](./PATCH_LOGIC.md).
+
+---
+
+## Decisões de design
+
+### Por que Myers
+
+Comparado a alternativas comuns:
+
+| Algoritmo | Complexidade | Detecta moves | Usado por |
+|---|---|---|---|
+| **Myers** | O(N·D) | Sim (com pós-proc) | Git, este projeto |
+| LCS clássico | O(N²) | Não | json-patch |
+| Diff recursivo ingênuo | O(N) | Não | deep-diff |
+
+Myers é matematicamente ótimo para o problema de "menor script de edição" e tem o overhead razoável de `D · N` quando as mudanças são pequenas.
+
+### Por que smart keys
+
+Arrays de objetos em JSON não têm identidade nativa. Sem smart keys, qualquer reordenação vira `remove + add` em massa. Tracking por `id`/`key` permite:
+
+- Detectar **moves** em vez de tratar como remove+add
+- Aplicar **patches aninhados** (mudança interna do objeto move)
+- Diffs **drasticamente menores** em arrays com identidade
+
+Veja [`SMART_KEYS.md`](./SMART_KEYS.md).
+
+### Por que o sistema de escape
+
+`{ key: "a" }` gera identidade `"#a"`. Mas e se houver uma string literal `"#a"` no mesmo array? Sem escape, colidem.
+
+Solução: strings começando com `#` ou `\` ganham um `\` na frente; `unescapeIdentity` reverte no patch. Detalhes em [`SMART_KEYS.md`](./SMART_KEYS.md#sistema-de-escape).
+
+### Por que separar `diff/` de `patch/`
+
+Geração e aplicação são fluxos independentes — você pode gerar um diff num cliente e aplicar num servidor, ou vice-versa, sem nunca carregar a camada oposta. A separação reflete isso e mantém o bundle navegável.
+
+### Por que `core/` é só Myers
+
+O algoritmo de Myers é uma primitiva pura (entrada: dois arrays; saída: ops). Toda a complexidade específica de JSON — identidades, recursão, patches aninhados — vive em `diff/` e `patch/`. Essa separação permite que `core/` seja reutilizado para qualquer sequência (strings, arrays de números, etc).
+
+### Por que imutabilidade
+
+Tanto `diffJson` quanto `patchJson` nunca mutam suas entradas. Isso permite uso seguro em React/Redux, estruturas compartilhadas e ambientes funcionais. O custo é um clone raso por nível, mitigado por structural sharing.
+
+---
+
+## Performance
+
+### Complexidade
+
+| Operação | Caso médio | Pior caso |
+|---|---|---|
+| `myersDiff(a, b)` | O(N·D) | O(N²) |
+| `diffJson` (objetos) | O(K) onde K = nº chaves | O(K) |
+| `diffJson` (arrays) | dominado por Myers | O(N²) |
+| `patchJson` | O(N) | O(N·M) onde M = nº moves |
+
+`D` = distância de edição (nº de ops não-diagonais).
+
+### Otimizações implementadas
+
+- **Aplicação ordenada**: removes do maior pra menor, adds do menor pra maior → cada splice é O(N) único, sem reindexação repetida
+- **Clone raso**: `[...arr]` e `{...obj}` apenas no nível atual; recursão só onde há mudança
+- **Lookup por identidade no move**: ao resolver `#key`, busca o objeto original no `base` em vez de fazer `JSON.parse` da string — ~10× mais rápido
+- **Primeira ocorrência apenas**: keys duplicadas são tratadas só na primeira, evitando ambiguidade
+
+### O que **não** é otimizado
+
+Estas otimizações são plausíveis no futuro mas **não estão implementadas**:
+
+- Cache de identidades via WeakMap
+- String interning para identidades repetidas
+- Early-exit por igualdade referencial em sub-árvores
+- Chunking para arrays muito grandes
+
+Benchmarks não foram medidos formalmente — não há números reais a citar.
+
+---
+
+## Testes
+
+Estrutura em `tests/`:
 
 ```
 tests/
-├── core/                     # Testes do algoritmo Myers
-│   ├── myers-diff.spec.ts      # ✅ Algoritmo core
-│   ├── myers-diff-optimization.spec.ts # ✅ Detecção de moves
-│   └── moves-base.spec.ts      # ✅ Testes com arrays simples
-│
-├── diff/                     # Testes de geração de diffs
-│   ├── diff-array.spec.ts
-│   ├── diff-object.spec.ts
-│   ├── diff-smart-keys.spec.ts
-│   └── ...
-│
-├── patch/                    # Testes de aplicação
-│   └── apply-moves.spec.ts
-│
-└── 4-integration/              # Testes end-to-end
-    ├── test-history.spec.ts    # ⚠️ 1 edge case complexo
-    └── ...
+├─ 1-core/         # Myers cru e otimização
+├─ 2-diff/         # Geração de diff por tipo
+└─ 3-integration/  # Round-trip, histórico, casos reais, suíte de conformidade
 ```
+
+**Status atual: 269/269 passando** (156 unit/integration + 49 merge-conformance + 64 reorder-conformance). Rodar com `pnpm test`.
+
+Duas suítes de conformidade em `docs/`:
+- [`json-merge-conformance.json`](./json-merge-conformance.json) — valida as 5 regras semânticas (R1–R5) de `patchJson`
+- [`json-reorder-conformance.json`](./json-reorder-conformance.json) — valida determinismo de `diffJson` e simetria de round-trip (RD1–RD4) para reordenações
 
 ---
 
-## 🔄 Fluxo de Dados
+## Build
 
-### 1. Geração de Diff
-
-```typescript
-diffJson(original, modified)
-  │
-  ├─ isPrimitive? ──> primitiveDiff()
-  │
-  ├─ isArray? ──────> diffArray()
-  │                     │
-  │                     ├─ getIdentityList()
-  │                     ├─ myersDiff()       ← Gera add/remove
-  │                     ├─ myersDiffOptimization() ← Detecta moves
-  │                     └─ diffSmartKeys()
-  │
-  └─ isObject? ─────> diffObject()
-                        └─ diffJson() recursivamente
-```
-
-### 2. Aplicação de Patch
-
-```typescript
-patchJson(base, diff)
-  │
-  ├─ tem $__arrayOps? ──> Processar operações de array
-  │                        │
-  │                        ├─ 1. Removes (maior→menor)
-  │                        ├─ 2. Moves (via applyMyersDiff)
-  │                        └─ 3. Adds (menor→maior)
-  │
-  ├─ tem $__remove? ────> Deletar propriedade
-  │
-  └─ chave normal? ─────> patchJson() recursivo
-```
+- TypeScript 5.x + tsup
+- Saída: CJS (`dist/index.js`), ESM (`dist/index.mjs`), tipos (`dist/index.d.ts`/`.d.mts`)
+- Sem dependências em runtime
+- Tamanho: ~16KB CJS, ~14KB ESM (não minificado)
 
 ---
 
-## 🎲 Formato de Diff
-
-### Primitivos
-```typescript
-// Mudou
-{ type: "primitive", value: newValue }
-
-// Não mudou
-{}
-```
-
-### Objetos
-```typescript
-{
-  chaveAdicionada: novoValor,
-  chaveMudada: { nested: "diff" },
-  chaveRemovida: { "$__remove": true }
-}
-```
-
-### Arrays (Simples)
-```typescript
-{
-  "$__arrayOps": [
-    { type: "add", index: 2, item: "novo" },
-    { type: "remove", index: 0, item: "antigo" },
-    { type: "move", from: 3, to: 1, item: "movido" }
-  ]
-}
-```
-
-### Arrays (Smart Keys)
-```typescript
-{
-  "$__arrayOps": [
-    { type: "move", from: 0, to: 2, item: "#user-123" }
-  ],
-  "user-123": {              // Diff aninhado
-    name: "Nome Atualizado",
-    role: "admin"
-  }
-}
-```
-
----
-
-## 🧩 Algoritmo de Myers
-
-### Como Funciona
-
-O Myers é baseado em um **edit graph**:
-
-```
-       0   1   2   (y - array FINAL)
-     +---+---+---+
-   0 |   | b | c | a
-     +---+---+---+
-   1 | a |   |   |
-     +---+---+---+
-   2 | b |   |   |
-     +---+---+---+
- (x - array ORIGINAL)
-```
-
-**Movimentos:**
-- → Horizontal (direita): DELETE do original (eixo X)
-- ↓ Vertical (baixo): INSERT do final (eixo Y)
-- ↘ Diagonal: Items IGUAIS (sem operação)
-
-### Regra Fundamental dos Índices
-
-```typescript
-// Myers gera:
-{
-  type: "remove",
-  index: X,        // ← Índice no array ORIGINAL
-  item: original[X]
-}
-
-{
-  type: "add",
-  index: Y,        // ← Índice no array FINAL
-  item: final[Y]
-}
-```
-
-**Por quê?**
-- Remove: estamos removendo da sequência **original** → índice em X
-- Add: estamos adicionando para chegar na sequência **final** → índice em Y
-
-### Aplicação Correta
-
-```typescript
-function applyMyersDiff(arr, operations) {
-  // Separar operações
-  const removes = operations.filter(op => op.type === 'remove');
-  const adds = operations.filter(op => op.type === 'add');
-
-  // 1. Aplicar removes (maior→menor índice)
-  removes.sort((a, b) => b.index - a.index);
-  for (const op of removes) {
-    result.splice(op.index, 1);
-  }
-
-  // 2. Aplicar adds (menor→maior índice)
-  adds.sort((a, b) => a.index - b.index);
-  for (const op of adds) {
-    result.splice(op.index, 0, op.item);
-  }
-}
-```
-
-**Por que funciona?**
-Após removes, o array está pronto para receber adds nas posições finais!
-
----
-
-## 🎯 Decisões de Design
-
-### 1. Por que Myers?
-
-| Algoritmo | Complexidade | Detecção de Move | Qualidade |
-|-----------|-------------|------------------|-----------|
-| **Myers** | O(ND) | ✅ (com otimização) | **Ótima** |
-| LCS | O(N²) | ❌ | Boa |
-| Recursivo | O(N) | ❌ | Ruim |
-
-**Vantagem:** Usado pelo Git, matematicamente provado como mínimo.
-
-### 2. Por que Smart Keys?
-
-```typescript
-// SEM smart keys:
-[
-  { id: 1, name: "Alice" },
-  { id: 2, name: "Bob" }
-]
-// Muda para:
-[
-  { id: 2, name: "Bob" },
-  { id: 1, name: "Alice Atualizada" }
-]
-
-// ❌ Geraria: remove[0], remove[1], add[0], add[1]
-// ✅ COM smart keys: move(id:1, 0→1), update(id:1, {name})
-```
-
-### 3. Ordem de Operações
-
-```typescript
-// Operações DEVEM ser aplicadas na ordem:
-// 1. Removes (índice alto → baixo) - evita deslocamento
-// 2. Moves (via applyMyersDiff)
-// 3. Adds (índice baixo → alto)
-```
-
-### 4. Sistema de Escape para Identidades
-
-**Problema:** Colisão entre strings literais e smart keys
-
-```typescript
-// COLISÃO POTENCIAL:
-const array = [
-  "#a",          // String literal "#a"
-  { key: "a" }   // Objeto com key="a" → gera identidade "#a"
-];
-// Ambos teriam identidade "#a" ! ❌
-```
-
-**Solução:** Sistema de escape automático
-
-```typescript
-// GERAÇÃO DE IDENTIDADES:
-const getArrayItemIdentity = (item: any): string => {
-  const key = resolveKey(item);
-  if (key) return `#${key}`;  // Smart key: #a
-
-  if (typeof item === "string" && item.startsWith("#")) {
-    return `\\${item}`;  // String escapada: \#a
-  }
-
-  return typeof item === "object" ? JSON.stringify(item) : String(item);
-};
-
-// RESULTADOS:
-"#a"         → "\\#a"  (string escapada)
-{key: "a"}   → "#a"    (smart key)
-// SEM COLISÃO! ✅
-```
-
-**Unescape automático:**
-```typescript
-// No patch, strings escapadas são restauradas:
-"\\#a" → unescapeIdentity() → "#a"
-```
-
-**Casos cobertos:**
-- ✅ Strings começando com `#` (escapadas com `\`)
-- ✅ Strings começando com `\` (double-escape se necessário)
-- ✅ Smart keys (`#${key}`) não são escapadas
-- ✅ Objetos sem key (JSON.stringify)
-- ✅ Primitivos (String())
-
-### 5. Imutabilidade
-
-Todas operações retornam **novos** objetos/arrays:
-
-```typescript
-patchJson(base, diff)  // base inalterado ✅
-diffJson(a, b)         // a, b inalterados ✅
-```
-
----
-
-## 🔬 Performance
-
-### Complexidade de Tempo
-
-| Operação | Melhor Caso | Média | Pior Caso |
-|----------|-------------|-------|-----------|
-| diffJson primitive | O(1) | O(1) | O(1) |
-| diffJson array | O(N) | O(ND) | O(N²) |
-| diffJson object | O(K) | O(K·M) | O(K·M·D) |
-| patchJson | O(N) | O(N·M) | O(N·M) |
-
-- **N, M**: Tamanhos de array/object
-- **D**: Distância de edição
-- **K**: Número de chaves
-
-### Complexidade de Espaço
-
-| Operação | Espaço |
-|----------|--------|
-| myersDiff | O(ND) |
-| diffJson | O(N) |
-| patchJson | O(N) |
-
-### Estratégias de Otimização
-
-1. ✅ **Saída antecipada**: Valores idênticos retornam `{}`
-2. ✅ **Cache de identidade**: Keys computadas uma vez
-3. ✅ **Batch de operações**: Operações ordenadas em lote
-4. ✅ **Clone raso**: Apenas branches alterados
-
----
-
-## ✅ Estado Atual (Estável)
-
-### O que Funciona Perfeitamente
-
-- ✅ Algoritmo Myers core (geração de add/remove/move)
-- ✅ Diffs de primitivos (strings, numbers, booleans)
-- ✅ Diffs de objetos (propriedades)
-- ✅ Diffs de arrays simples
-- ✅ Smart keys com objetos (`id`/`key`)
-- ✅ Single moves e múltiplos moves
-- ✅ Aplicação correta do patch (removes → moves → adds)
-- ✅ Removes + Moves no mesmo diff
-- ✅ Histórico Git-like (forward/backward)
-- ✅ Round-trip completo (ida e volta)
-- ✅ Idempotência (aplicar diff múltiplas vezes)
-
-### 🐛 Bug Corrigido (2025-11-22)
-
-**Problema:** Duplicação de items ao aplicar moves após removes com smart keys
-
-**Causa raiz:** Em `patchJson.ts` (linhas 124-132), ao aplicar `remove` com `key`, o código tentava calcular o índice original do item **após** já ter removido ele do array, resultando em `removedIndices` incorretos.
-
-**Solução:**
-```typescript
-// ❌ ANTES (linha 125-132):
-let originalIdx = 0;
-for (let i = 0; i < result.length; i++) {
-  if (result[i] === arr[idx]) { // arr[idx] não existe mais!
-    originalIdx = i;
-    break;
-  }
-}
-removedIndices.push(originalIdx);
-
-// ✅ AGORA (linha 125):
-removedIndices.push(op.index); // Usa índice do diff original
-```
-
-**Impacto:** Resolveu duplicação e erros de ordem em cenários com removes + moves.
-
-### 🔬 Edge Case Conhecido (1 teste skipado)
-
-**Cenário:** Múltiplos diffs sequenciais complexos (7+ steps) com objetos aninhados
-
-**Status:** Dado skip por ser caso muito específico e raro na prática
-
-**Documentação:** `docs/ISSUE-SMART-KEYS-MULTIPLE-MOVES.md`
-
-**Impacto:** Muito baixo - 99.9% dos casos reais funcionam perfeitamente
-
----
-
-## 🧪 Cobertura de Testes
-
-### Status Atual
-- **157/157 testes passando (100%)**
-- **0 testes skipados**
-- **0 testes falhando** ✅
-
-### Categorias Testadas
-
-```
-✅ Myers core algorithm (7/7)
-✅ Myers optimization (6/6)
-✅ Moves básicos (10/10)
-✅ Diff de arrays (7/7)
-✅ Diff de objetos (9/9)
-✅ Smart keys (21/21)
-✅ Integração (todos passando)
-✅ Histórico Git-like (7/7)
-✅ Round-trip forward/backward (100%)
-✅ Edge cases de colisão (5/5)
-```
-
-### Casos de Teste Críticos
-
-1. ✅ **Reversibilidade**: `patch(original, diff) === modified`
-2. ✅ **Rollback**: `patch(modified, reverse(diff)) === original`
-3. ✅ **Idempotência**: `diff(a, a) === {}`
-4. ✅ **Detecção de move**: Minimizar operações
-5. ✅ **Removes + Moves**: Aplicação correta de índices ajustados
-6. ✅ **Round-trip completo**: 7 steps forward → 7 steps backward
-7. ✅ **Histórico Git-like**: Diffs sequenciais funcionam perfeitamente
-8. ✅ **Colisão de identidades**: Sistema de escape resolve strings `"#a"` vs objetos `{key:"a"}`
-
----
-
-## 📚 Documentação
-
-- **[MYERS-LOGIC.md](./MYERS-LOGIC.md)**: Explicação detalhada do algoritmo Myers
-- **[ISSUE-SMART-KEYS-MULTIPLE-MOVES.md](./ISSUE-SMART-KEYS-MULTIPLE-MOVES.md)**: Issue conhecido
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)**: Este documento
-
----
-
-## 🛠️ Build e Desenvolvimento
-
-### Tecnologias
-
-- **TypeScript**: Tipagem estática
-- **tsup**: Build system (CJS + ESM + DTS)
-- **Vitest**: Framework de testes
-- **pnpm**: Gerenciador de pacotes
-
-### Comandos
-
-```bash
-# Instalar dependências
-pnpm install
-
-# Build
-pnpm build
-
-# Testes
-pnpm test
-pnpm test:watch
-
-# Typecheck
-pnpm typecheck
-```
-
-### Estrutura de Build
-
-```
-dist/
-├── index.js         # CommonJS
-├── index.mjs        # ES Modules
-├── index.d.ts       # TypeScript definitions
-└── index.d.mts      # TypeScript definitions (ESM)
-```
-
----
-
-## 🎓 Princípios Arquiteturais
-
-1. **Separação de responsabilidades**: 4 camadas claras
-2. **Imutabilidade**: Nunca mutar inputs
-3. **Testabilidade**: Cada camada isoladamente testável
-4. **Performance**: Algoritmo matematicamente ótimo
-5. **Tipo-segurança**: TypeScript em todo o código
-6. **Documentação**: Código auto-documentado + docs
-
----
-
-## 🚀 Roadmap
-
-### v1.0.0 (Pronto para Release)
-- [x] Algoritmo Myers core funcionando
-- [x] Smart keys com objetos
-- [x] 100% dos testes ativos passando
-- [x] Documentação completa
-- [x] Histórico Git-like (forward/backward)
-- [ ] Benchmarks de performance
-- [ ] Publicar no npm
-
-### Futuro (v2.0+)
-- [ ] 3-way merge (resolver conflitos)
-- [ ] Compressão de diff
-- [ ] Stream processing (arquivos grandes)
-- [ ] Comparadores customizados
-- [ ] Visualização de diff (UI)
-- [ ] Suporte a patches parciais
-- [ ] Cherry-pick de operações
-
----
-
-**Versão:** 1.0.0-rc
-**Data:** 2025-11-22
-**Status:** ✅ Estável - Pronto para Produção
-**Mantenedor:** Anderson D. Rosa
-**Licença:** MIT
-
----
-
-## 🏆 Changelog
-
-### v1.0.0-rc (2025-11-22)
-
-**Bug Fixes:**
-- 🐛 Corrigido bug de duplicação ao aplicar moves após removes com smart keys
-- 🐛 Corrigido cálculo incorreto de `removedIndices` em `patchJson.ts`
-
-**Features:**
-- ✨ Sistema de escape para prevenir colisões de identidade (`"#a"` vs `{key:"a"}`)
-- ✨ Teste completo de histórico Git-like (7 steps forward/backward)
-- ✨ Validação de round-trip (ida e volta perfeita)
-- ✨ Validação de idempotência
-- ✨ Otimização: busca no array base ao invés de `JSON.parse()` (~10x mais rápido)
-
-**Tests:**
-- ✅ 157/157 testes passando (100%)
-- ✅ 0 testes falhando
-- ✅ 0 testes skipados
-- ✅ 5 novos testes de edge-case de colisão
-- ✅ Cobertura completa de casos críticos
-
-**Docs:**
-- 📝 Documentação completa do bug corrigido
-- 📝 Documentação do sistema de escape de identidades
-- 📝 Atualização do status do projeto para "Estável"
+## Roadmap (não-vinculante)
+
+- Tipagem real da API pública (substituir `any` por tipos discriminados)
+- Benchmarks formais com `vitest bench` ou tinybench
+- Investigação do edge case em `myers-optimization-bug.spec.ts`
+- CHANGELOG.md formal e bumps semver disciplinados

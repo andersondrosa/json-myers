@@ -1,6 +1,6 @@
 {
   "name": "json-myers",
-  "version": "1.0.4",
+  "version": "2.0.0",
   "description": "High-performance JSON diff/patch library using Myers algorithm with move detection and smart keys support",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -24,6 +24,7 @@
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
   },
   "devDependencies": {
+    "@types/node": "^25.9.1",
     "@vitest/coverage-v8": "^4.0.13",
     "prettier": "^3.6.2",
     "tsup": "^8.0.1",
