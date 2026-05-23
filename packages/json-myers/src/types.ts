@@ -1,0 +1,279 @@
+/**
+ * Diff format types — the wire shape of a json-myers diff (v2).
+ *
+ * Two markers travel inside JSON diffs:
+ *
+ * - `$ops` — structural-array marker. An object carrying this key is
+ *   interpreted as a list of array operations to apply on a base that
+ *   MUST be an array (R6 — throws `OpsBaseNotArrayError` otherwise).
+ *   Other keys alongside `$ops` are NESTED UPDATES by smart-key
+ *   (key value matches the `key`/`id` of an item in the resulting
+ *   array).
+ *
+ * - `$remove: [...keys]` — at an object level, deletes the listed keys
+ *   from the merged result. Single removal is a 1-element list.
+ *   Processed BEFORE other entries in the same patch (so
+ *   `{$remove:['a'], a: 9}` ends up `{a: 9}` — effective reset).
+ *
+ * Operations inside `$ops` discriminate two modes by the field used:
+ *
+ * - `index` field → positional mode (raw position in the array)
+ * - `key` field   → smart-key mode (identity via `key`/`id` of items)
+ *
+ * `move` is the canonical "move" operation; the `remove key=X` +
+ * `add key=X` pair is accepted as syntactic sugar with identical
+ * semantics (the removed item is reused, preserving identity).
+ */
+
+/**
+ * Bulk key-removal marker. At an object level, `{ $remove: [...keys] }`
+ * deletes the listed keys from the merged result.
+ *
+ * Single removal is just a 1-element list: `{ $remove: ['name'] }`.
+ * Scoped to the object level where it appears — to remove deep keys,
+ * nest it: `{ user: { $remove: ['tempField'] } }`.
+ */
+export type RemoveListMarker = readonly string[];
+
+// ── Add op ───────────────────────────────────────────────────────────
+
+/** Positional add: insert a literal item at `index`. */
+export interface AddOpPositional {
+  readonly type: "add";
+  readonly index: number;
+  readonly item: unknown;
+}
+
+/**
+ * Smart-key add: insert an item identified by `key` at the given
+ * `index` of the result. The item content is sourced from a sibling
+ * diff entry keyed by `key` (or reused from a paired `remove` op with
+ * the same key).
+ */
+export interface AddOpSmartKey {
+  readonly type: "add";
+  readonly key: string;
+  readonly index?: number;
+}
+
+export type AddOp = AddOpPositional | AddOpSmartKey;
+
+// ── Remove op ────────────────────────────────────────────────────────
+
+/** Positional remove: remove the item at `index`. */
+export interface RemoveOpPositional {
+  readonly type: "remove";
+  readonly index: number;
+}
+
+/** Smart-key remove: remove the item identified by `key`. */
+export interface RemoveOpSmartKey {
+  readonly type: "remove";
+  readonly key: string;
+}
+
+export type RemoveOp = RemoveOpPositional | RemoveOpSmartKey;
+
+// ── Move op ──────────────────────────────────────────────────────────
+
+/** Positional move: move the item at `from` to position `to`. */
+export interface MoveOpPositional {
+  readonly type: "move";
+  readonly from: number;
+  readonly to: number;
+}
+
+/** Smart-key move: move the item identified by `key` to position `to`. */
+export interface MoveOpSmartKey {
+  readonly type: "move";
+  readonly key: string;
+  readonly to: number;
+}
+
+export type MoveOp = MoveOpPositional | MoveOpSmartKey;
+
+// ── Any op ───────────────────────────────────────────────────────────
+
+export type Op = AddOp | RemoveOp | MoveOp;
+
+/** A diff fragment that targets an array — carries `$ops`. */
+export interface OpsDiff {
+  readonly $ops: readonly Op[];
+  /**
+   * Identity field name for smart-key operations within this array.
+   * Optional — when omitted, falls back to `PatchOptions.identity` or
+   * the default `"id"`. Lives in the wire so each array can declare
+   * its own (e.g. `users` with `"id"`, `products` with `"sku"` in the
+   * same document).
+   */
+  readonly $identity?: string;
+  /**
+   * Assertion that the base array is a homogeneous collection of
+   * objects with declared identity. When `true`, applying the diff
+   * pre-validates the base (`CollectionAssertionError` on violation)
+   * and the algorithm operates in a fast path. Inferred automatically
+   * by `diffJson` when the source/target arrays form a collection.
+   */
+  readonly $assertCollection?: boolean;
+  /** Nested updates keyed by smart-key — applied after ops run. */
+  readonly [smartKey: string]: unknown;
+}
+
+/** Any json-myers diff fragment (opaque). */
+export type Diff = unknown;
+
+// ── Options ──────────────────────────────────────────────────────────
+
+/** Default identity field name when none is declared. */
+export const DEFAULT_IDENTITY = "id" as const;
+
+/** Options for `patchJson`. */
+export interface PatchOptions {
+  /**
+   * Strict mode — assume the diff was generated by a real `diffJson`
+   * against this exact base. Any inconsistency (missing key, out-of-
+   * range index, no-op move, …) is a violation and throws
+   * `StrictViolationError`. Default `false` (permissive — silent
+   * ignore inconsistencies; appropriate for hand-authored patches).
+   */
+  readonly strict?: boolean;
+
+  /**
+   * Identity field name to use as smart-key when an array-diff doesn't
+   * declare its own `$identity` in the wire. Default `"id"`. Each
+   * array-diff in the wire MAY override this for itself via the
+   * `$identity` marker — patch reads the diff's `$identity` first,
+   * then falls back to this option, then to `"id"`.
+   */
+  readonly identity?: string;
+}
+
+/** Options for `diffJson`. */
+export interface DiffOptions {
+  /**
+   * Identity field name to use as smart-key in arrays. Default `"id"`.
+   * In v3.x, identity is a single global value for the whole
+   * `diffJson` call; per-array overrides require hand-authored
+   * `$identity` markers in the resulting diff. Per-path schema-driven
+   * identity is planned for v4.x.
+   */
+  readonly identity?: string;
+}
+
+// ── Errors ───────────────────────────────────────────────────────────
+
+/**
+ * Error thrown when a `$ops` diff fragment is applied over a base that
+ * is not an array (R6 of the conformance). Raised in BOTH modes — R6
+ * is a structural violation, independent of `strict`.
+ */
+export class OpsBaseNotArrayError extends Error {
+  readonly code = "OPS_BASE_NOT_ARRAY" as const;
+  readonly baseType: string;
+
+  constructor(baseType: string) {
+    super(`$ops requires the base to be an array, got: ${baseType}`);
+    this.name = "OpsBaseNotArrayError";
+    this.baseType = baseType;
+  }
+}
+
+/** Type guard for the R6 error. */
+export function isOpsBaseNotArrayError(
+  err: unknown,
+): err is OpsBaseNotArrayError {
+  return err instanceof OpsBaseNotArrayError;
+}
+
+/**
+ * Enumerated codes for strict-mode violations.
+ *
+ * - `KEY_NOT_FOUND`         — smart-key lookup (remove/move/nested) didn't find an item.
+ * - `INDEX_OUT_OF_RANGE`    — positional remove/move-from with an out-of-range index.
+ * - `KEY_ALREADY_EXISTS`    — smart-key add for a key that's already in the array.
+ * - `MOVE_NO_OP`            — a move where `from === to` (sintoma de bug do gerador).
+ * - `OBJECT_KEY_NOT_FOUND`  — `$remove: ["k"]` where `k` is not a key of the base object.
+ */
+export type StrictViolationCode =
+  | "KEY_NOT_FOUND"
+  | "INDEX_OUT_OF_RANGE"
+  | "KEY_ALREADY_EXISTS"
+  | "MOVE_NO_OP"
+  | "OBJECT_KEY_NOT_FOUND";
+
+/**
+ * Error thrown in strict mode when a patch diverges from the base it
+ * was supposed to be generated against. Only raised when
+ * `patchJson(..., { strict: true })`.
+ */
+export class StrictViolationError extends Error {
+  readonly code: StrictViolationCode;
+  readonly details: Readonly<Record<string, unknown>>;
+
+  constructor(
+    code: StrictViolationCode,
+    message: string,
+    details: Record<string, unknown> = {},
+  ) {
+    super(message);
+    this.name = "StrictViolationError";
+    this.code = code;
+    this.details = details;
+  }
+}
+
+/** Type guard for strict-mode violations. */
+export function isStrictViolationError(
+  err: unknown,
+): err is StrictViolationError {
+  return err instanceof StrictViolationError;
+}
+
+/**
+ * Enumerated codes for collection-assertion violations.
+ *
+ * Raised ONLY when an array-diff carries `$assertCollection: true` and
+ * the base array fails the homogeneous-collection contract.
+ * Independent of strict mode — these are STRUCTURAL violations (the
+ * shape of items), like R6, and always throw when asserted.
+ *
+ * - `COLLECTION_NON_OBJECT_ITEM`     — an item is not a plain object
+ *   (e.g. a string, number, or array in a position that should be an
+ *   object with identity).
+ * - `COLLECTION_MISSING_IDENTITY`    — an item is a plain object but
+ *   doesn't carry the declared identity field.
+ * - `COLLECTION_DUPLICATE_IDENTITY`  — two items share the same
+ *   identity value, breaking the collection contract.
+ */
+export type CollectionAssertionCode =
+  | "COLLECTION_NON_OBJECT_ITEM"
+  | "COLLECTION_MISSING_IDENTITY"
+  | "COLLECTION_DUPLICATE_IDENTITY";
+
+/**
+ * Error raised when an array marked `$assertCollection: true` doesn't
+ * satisfy the homogeneous-collection contract. Always thrown when the
+ * assertion fails — independent of `strict` mode.
+ */
+export class CollectionAssertionError extends Error {
+  readonly code: CollectionAssertionCode;
+  readonly details: Readonly<Record<string, unknown>>;
+
+  constructor(
+    code: CollectionAssertionCode,
+    message: string,
+    details: Record<string, unknown> = {},
+  ) {
+    super(message);
+    this.name = "CollectionAssertionError";
+    this.code = code;
+    this.details = details;
+  }
+}
+
+/** Type guard for collection-assertion violations. */
+export function isCollectionAssertionError(
+  err: unknown,
+): err is CollectionAssertionError {
+  return err instanceof CollectionAssertionError;
+}

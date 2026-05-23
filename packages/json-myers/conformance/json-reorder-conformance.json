@@ -1,0 +1,146 @@
+{
+  "name": "json-myers reorder conformance",
+  "version": "1.0.0",
+  "description": "Testes de comportamento de REORDENAÇÃO em arrays — foco no determinismo da geração de diff (`diffJson`) e simetria de round-trip. Complementa `json-merge-conformance.json` (que cobre aplicação via `patchJson`). Cada caso é `(base, modified)` — o runner exercita: (1) estabilidade de `diffJson` em N runs, (2) round-trip forward, (3) round-trip backward.",
+  "spec": {
+    "scope": "Geração de diff (`diffJson`) — determinismo + reversibilidade. Sem fixar valores canônicos (não amarra implementações alternativas; só o invariante de protocolo importa).",
+    "rules": [
+      "RD1 — Estabilidade: `diffJson(base, modified)` em N runs distintos deve produzir output bit-a-bit idêntico.",
+      "RD2 — Forward: `patchJson(base, diffJson(base, modified)) === modified`.",
+      "RD3 — Backward: `patchJson(modified, diffJson(modified, base)) === base`.",
+      "RD4 — Estabilidade do reverso: `diffJson(modified, base)` também é estável em N runs."
+    ],
+    "runner_protocol": {
+      "default_runs": 5,
+      "deep_equal": "JSON.stringify-based or structural equivalent",
+      "indeterminate_handling": "n/a — sem casos indeterminados nesta conformance"
+    },
+    "currently_correct_in_json_myers_1_0_3": "Todos os casos abaixo verificados estáveis e reversíveis em janeiro/2026."
+  },
+  "cases": [
+    {
+      "id": "swap.primitives-2",
+      "category": "swap",
+      "description": "Swap puro entre dois elementos primitivos — o caso minimal da pergunta filosófica 'quem se moveu?'",
+      "base": ["A", "B"],
+      "modified": ["B", "A"]
+    },
+    {
+      "id": "swap.primitives-middle-of-3",
+      "category": "swap",
+      "description": "Swap dos dois últimos com pivô fixo na primeira posição",
+      "base": ["A", "B", "C"],
+      "modified": ["A", "C", "B"]
+    },
+    {
+      "id": "swap.primitives-extremes",
+      "category": "swap",
+      "description": "Swap das pontas com miolo fixo",
+      "base": ["A", "B", "C", "D"],
+      "modified": ["D", "B", "C", "A"]
+    },
+    {
+      "id": "swap.smart-keys-2",
+      "category": "swap-smart-keys",
+      "description": "Swap entre objetos identificáveis por `id` — convenção smart-key deve emitir único move com identidade",
+      "base": [
+        { "id": "1", "v": "A" },
+        { "id": "2", "v": "B" }
+      ],
+      "modified": [
+        { "id": "2", "v": "B" },
+        { "id": "1", "v": "A" }
+      ]
+    },
+    {
+      "id": "swap.smart-keys-with-nested-update",
+      "category": "swap-smart-keys",
+      "description": "Swap + mutação em propriedade do item — o diff deve combinar `move` com nested update por chave",
+      "base": [
+        { "id": "1", "name": "Alice", "role": "user" },
+        { "id": "2", "name": "Bob", "role": "user" }
+      ],
+      "modified": [
+        { "id": "2", "name": "Bob", "role": "admin" },
+        { "id": "1", "name": "Alice", "role": "admin" }
+      ]
+    },
+    {
+      "id": "rotation.circular-left-3",
+      "category": "rotation",
+      "description": "Rotação à esquerda — primeiro elemento vai pro fim",
+      "base": ["A", "B", "C"],
+      "modified": ["B", "C", "A"]
+    },
+    {
+      "id": "rotation.circular-right-3",
+      "category": "rotation",
+      "description": "Rotação à direita — último elemento vai pro início (`json-myers 1.0.3` resolve em 1 op só: `move C from:2 to:0`, demonstrando a heurística de minimizar operações)",
+      "base": ["A", "B", "C"],
+      "modified": ["C", "A", "B"]
+    },
+    {
+      "id": "rotation.circular-left-4",
+      "category": "rotation",
+      "description": "Rotação à esquerda com 4 elementos",
+      "base": ["A", "B", "C", "D"],
+      "modified": ["B", "C", "D", "A"]
+    },
+    {
+      "id": "reverse.complete-3",
+      "category": "reverse",
+      "description": "Reverso completo de 3 elementos — `json-myers` evita o que está no meio (pivô) e move só os de fora",
+      "base": ["A", "B", "C"],
+      "modified": ["C", "B", "A"]
+    },
+    {
+      "id": "reverse.complete-4",
+      "category": "reverse",
+      "description": "Reverso completo de 4 elementos — caso de cardinalidade maior, gera múltiplos moves",
+      "base": ["A", "B", "C", "D"],
+      "modified": ["D", "C", "B", "A"]
+    },
+    {
+      "id": "mixed.move-plus-add-tail",
+      "category": "mixed",
+      "description": "Reordenação + adição no final",
+      "base": ["A", "B"],
+      "modified": ["B", "A", "C"]
+    },
+    {
+      "id": "mixed.move-plus-add-head",
+      "category": "mixed",
+      "description": "Reordenação + adição no início",
+      "base": ["A", "B"],
+      "modified": ["C", "B", "A"]
+    },
+    {
+      "id": "mixed.move-plus-remove",
+      "category": "mixed",
+      "description": "Reordenação + remoção",
+      "base": ["A", "B", "C"],
+      "modified": ["C", "A"]
+    },
+    {
+      "id": "mixed.add-remove-move",
+      "category": "mixed",
+      "description": "Três operações combinadas",
+      "base": ["A", "B", "C"],
+      "modified": ["C", "X", "A"]
+    },
+    {
+      "id": "non-overlapping.two-swaps",
+      "category": "non-overlapping",
+      "description": "Dois swaps independentes no mesmo array — o algoritmo deve resolver localmente cada região sem interferência",
+      "base": ["A", "B", "C", "D"],
+      "modified": ["B", "A", "D", "C"]
+    },
+    {
+      "id": "identity.no-change",
+      "category": "identity",
+      "description": "Array idêntico — diff deve ser vazio (ou `{}`); patch sobre vazio retorna base intacta",
+      "base": ["A", "B", "C"],
+      "modified": ["A", "B", "C"]
+    }
+  ]
+}

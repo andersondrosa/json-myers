@@ -1,0 +1,57 @@
+{
+  "name": "@statedelta/json-myers",
+  "version": "3.0.0",
+  "description": "Clean-room implementation of the json-myers diff/patch contract — drop-in alternative to the `json-myers` npm package, written against the StateDelta conformance suite (R1–R6).",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./patch": {
+      "types": "./dist/patch.d.ts",
+      "import": "./dist/patch.js",
+      "require": "./dist/patch.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "conformance",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\""
+  },
+  "dependencies": {},
+  "keywords": [
+    "statedelta",
+    "json-myers",
+    "diff",
+    "patch",
+    "merge"
+  ],
+  "author": "Anderson D. Rosa <andersondrosa@outlook.com>",
+  "license": "MIT",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1"
+  }
+}
