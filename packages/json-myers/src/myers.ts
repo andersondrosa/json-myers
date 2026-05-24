@@ -173,8 +173,7 @@ function backtrack<T>(
     const k = x - y;
     const kIdx = k + max;
 
-    const cameFromInsert =
-      k === -d || (k !== d && v[kIdx - 1]! < v[kIdx + 1]!);
+    const cameFromInsert = k === -d || (k !== d && v[kIdx - 1]! < v[kIdx + 1]!);
 
     const prevK = cameFromInsert ? k + 1 : k - 1;
     const prevKIdx = prevK + max;

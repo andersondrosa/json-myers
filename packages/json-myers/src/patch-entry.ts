@@ -1,5 +1,5 @@
 /**
- * @statedelta/json-myers/patch
+ * json-myers/patch
  *
  * Patch-only subset — for runtimes that only APPLY diffs (clients
  * receiving server-sent patches, launchers consuming
@@ -14,7 +14,7 @@
  *   - All types relevant to consuming a diff
  *   - `DEFAULT_IDENTITY` constant
  *
- * For full diff generation, import from `@statedelta/json-myers`.
+ * For full diff generation, import from `json-myers`.
  */
 
 export { patchJson } from "./patch.js";

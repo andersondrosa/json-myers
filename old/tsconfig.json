@@ -1,0 +1,35 @@
+{
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"],
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "sourceMap": true,
+    /* Bundler mode */
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "noImplicitAny": false,
+    "baseUrl": ".",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "declarationDir": "./dist",
+
+    /* Linting */
+    "strict": false,
+    "noUnusedLocals": false, // Gera erros quando há variáveis locais não usadas
+    "noUnusedParameters": false, // Gera erros quando há parâmetros de função não usados
+    "noImplicitReturns": false, // Gera erros quando uma função tem caminhos de código que não retornam explicitamente um valor
+    "noFallthroughCasesInSwitch": true,
+
+    "lib": ["DOM", "DOM.Iterable", "ESNext"], // Tipos de ambiente incluídos (DOM para browser)
+    "allowSyntheticDefaultImports": true, // Permite importar módulos com importações default mesmo que não seja um ES Module
+
+    /* Type Checking */
+    "strictNullChecks": true // Verifica o uso correto de null e undefined
+  }
+}

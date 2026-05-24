@@ -1,7 +1,7 @@
 {
-  "name": "@statedelta/json-myers",
+  "name": "json-myers",
   "version": "3.0.0",
-  "description": "Clean-room implementation of the json-myers diff/patch contract — drop-in alternative to the `json-myers` npm package, written against the StateDelta conformance suite (R1–R6).",
+  "description": "JSON diff/patch — Myers algorithm with identity-aware semantics. Backed by an executable conformance suite (R1–R6 patch, RD1–RD4 diff).",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

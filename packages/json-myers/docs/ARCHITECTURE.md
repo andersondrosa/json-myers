@@ -1,6 +1,6 @@
 # json-myers — Arquitetura
 
-Internals técnicos do pacote `@statedelta/json-myers`. Para a visão de
+Internals técnicos do pacote `json-myers`. Para a visão de
 alto nível e API pública, veja
 [`README.md`](../README.md). Para o registro de cada decisão de design
 (incluindo rejeições), veja [`DECISIONS.md`](../DECISIONS.md).
@@ -41,8 +41,8 @@ via `exports` map no `package.json`:
 
 | Entry-point | Bundle ESM | Bundle CJS | API |
 |---|---|---|---|
-| `@statedelta/json-myers` | ~9.5 KB | ~9.5 KB | tudo (diff + patch + myers + fingerprint) |
-| `@statedelta/json-myers/patch` | ~4.9 KB | ~4.9 KB | só `patchJson`, `applyArrayOps`, errors, types |
+| `json-myers` | ~9.5 KB | ~9.5 KB | tudo (diff + patch + myers + fingerprint) |
+| `json-myers/patch` | ~4.9 KB | ~4.9 KB | só `patchJson`, `applyArrayOps`, errors, types |
 
 Quem só APLICA patches (clients, launchers, ETL targets) importa de
 `/patch` e ganha **~51% de redução** no bundle. Quem gera diffs
@@ -819,19 +819,19 @@ spawn) roda em ~600 ms.
 pnpm install
 
 # typecheck
-pnpm --filter @statedelta/json-myers typecheck
+pnpm --filter json-myers typecheck
 
 # build (tsup — CJS + ESM + DTS)
-pnpm --filter @statedelta/json-myers build
+pnpm --filter json-myers build
 
 # tests
-pnpm --filter @statedelta/json-myers test
+pnpm --filter json-myers test
 
 # tests watch
-pnpm --filter @statedelta/json-myers test:watch
+pnpm --filter json-myers test:watch
 
 # coverage
-pnpm --filter @statedelta/json-myers test:coverage
+pnpm --filter json-myers test:coverage
 ```
 
 Output do build:

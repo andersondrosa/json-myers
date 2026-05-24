@@ -112,24 +112,15 @@ describe("Round-trip — objects", () => {
   });
 
   it("nested 3 levels — change at deepest", () => {
-    rtBoth(
-      { a: { b: { c: 1 } } },
-      { a: { b: { c: 2 } } },
-    );
+    rtBoth({ a: { b: { c: 1 } } }, { a: { b: { c: 2 } } });
   });
 
   it("nested 3 levels — change at middle", () => {
-    rtBoth(
-      { a: { b: { c: 1 } } },
-      { a: { b: { c: 1, d: 2 } } },
-    );
+    rtBoth({ a: { b: { c: 1 } } }, { a: { b: { c: 1, d: 2 } } });
   });
 
   it("remove deeply nested property", () => {
-    rtBoth(
-      { a: { b: { x: 1, y: 2 } } },
-      { a: { b: { x: 1 } } },
-    );
+    rtBoth({ a: { b: { x: 1, y: 2 } } }, { a: { b: { x: 1 } } });
   });
 
   it("multiple deep changes", () => {
@@ -166,7 +157,8 @@ describe("Round-trip — arrays of primitives", () => {
   it("reverse five", () => rtBoth([1, 2, 3, 4, 5], [5, 4, 3, 2, 1]));
   it("completely different", () => rtBoth([1, 2, 3], [9, 8, 7]));
   it("rotation left", () => rtBoth(["a", "b", "c", "d"], ["b", "c", "d", "a"]));
-  it("rotation right", () => rtBoth(["a", "b", "c", "d"], ["d", "a", "b", "c"]));
+  it("rotation right", () =>
+    rtBoth(["a", "b", "c", "d"], ["d", "a", "b", "c"]));
   it("empty → non-empty", () => rtBoth([], [1, 2, 3]));
   it("non-empty → empty", () => rtBoth([1, 2, 3], []));
   it("mixed types primitives", () =>
@@ -189,37 +181,46 @@ describe("Round-trip — arrays of smart-keyed objects", () => {
   });
 
   it("update single field on identified item", () => {
-    rtBoth(
-      [{ id: "alice", role: "user" }],
-      [{ id: "alice", role: "admin" }],
-    );
+    rtBoth([{ id: "alice", role: "user" }], [{ id: "alice", role: "admin" }]);
   });
 
   it("update on second item, first unchanged", () => {
     rtBoth(
-      [{ id: "alice", role: "user" }, { id: "bob", role: "user" }],
-      [{ id: "alice", role: "user" }, { id: "bob", role: "admin" }],
+      [
+        { id: "alice", role: "user" },
+        { id: "bob", role: "user" },
+      ],
+      [
+        { id: "alice", role: "user" },
+        { id: "bob", role: "admin" },
+      ],
     );
   });
 
   it("swap two smart-keyed items", () => {
-    rtBoth(
-      [{ id: "alice" }, { id: "bob" }],
-      [{ id: "bob" }, { id: "alice" }],
-    );
+    rtBoth([{ id: "alice" }, { id: "bob" }], [{ id: "bob" }, { id: "alice" }]);
   });
 
   it("swap + update — identity preserved through move", () => {
     rtBoth(
-      [{ id: "alice", role: "user" }, { id: "bob", role: "user" }],
-      [{ id: "bob", role: "admin" }, { id: "alice", role: "admin" }],
+      [
+        { id: "alice", role: "user" },
+        { id: "bob", role: "user" },
+      ],
+      [
+        { id: "bob", role: "admin" },
+        { id: "alice", role: "admin" },
+      ],
     );
   });
 
   it("add new item with payload", () => {
     rtBoth(
       [{ id: "alice", role: "user" }],
-      [{ id: "alice", role: "user" }, { id: "bob", role: "admin" }],
+      [
+        { id: "alice", role: "user" },
+        { id: "bob", role: "admin" },
+      ],
     );
   });
 
@@ -248,7 +249,10 @@ describe("Round-trip — arrays of smart-keyed objects", () => {
   it("numeric id preserved as number", () => {
     rtBoth(
       [{ id: 1, name: "Alice" }],
-      [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }],
+      [
+        { id: 1, name: "Alice" },
+        { id: 2, name: "Bob" },
+      ],
     );
   });
 
@@ -281,8 +285,16 @@ describe("Round-trip — arrays of smart-keyed objects", () => {
 
   it("3 duplicates — only first is smart-key", () => {
     rtBoth(
-      [{ id: "x", v: 1 }, { id: "x", v: 2 }, { id: "x", v: 3 }],
-      [{ id: "x", v: 1 }, { id: "x", v: 99 }, { id: "x", v: 3 }],
+      [
+        { id: "x", v: 1 },
+        { id: "x", v: 2 },
+        { id: "x", v: 3 },
+      ],
+      [
+        { id: "x", v: 1 },
+        { id: "x", v: 99 },
+        { id: "x", v: 3 },
+      ],
     );
   });
 });
@@ -321,14 +333,20 @@ describe("Round-trip — mixed arrays", () => {
   });
 
   it("array of objects without identity (content-hash)", () => {
-    rtBoth(
-      [{ x: 1 }, { x: 2 }, { x: 3 }],
-      [{ x: 1 }, { x: 99 }, { x: 3 }],
-    );
+    rtBoth([{ x: 1 }, { x: 2 }, { x: 3 }], [{ x: 1 }, { x: 99 }, { x: 3 }]);
   });
 
   it("nested arrays in array", () => {
-    rtBoth([[1, 2], [3, 4]], [[1, 2], [5, 6]]);
+    rtBoth(
+      [
+        [1, 2],
+        [3, 4],
+      ],
+      [
+        [1, 2],
+        [5, 6],
+      ],
+    );
   });
 });
 
@@ -344,10 +362,7 @@ describe("Round-trip — type changes", () => {
   it("array → primitive", () => rtBoth([1, 2], 99));
   it("primitive → array", () => rtBoth(99, [1, 2]));
   it("nested object → array", () => {
-    rtBoth(
-      { config: { items: { x: 1 } } },
-      { config: { items: [1, 2, 3] } },
-    );
+    rtBoth({ config: { items: { x: 1 } } }, { config: { items: [1, 2, 3] } });
   });
 });
 
@@ -361,16 +376,10 @@ describe("Round-trip — null handling", () => {
   it("null → array", () => rtBoth(null, [1, 2]));
   it("array → null", () => rtBoth([1, 2], null));
   it("nested null becomes value", () => {
-    rtBoth(
-      { a: null, b: 1 },
-      { a: { x: 1 }, b: 1 },
-    );
+    rtBoth({ a: null, b: 1 }, { a: { x: 1 }, b: 1 });
   });
   it("nested value becomes null", () => {
-    rtBoth(
-      { a: { x: 1 } },
-      { a: null },
-    );
+    rtBoth({ a: { x: 1 } }, { a: null });
   });
 });
 
@@ -381,8 +390,14 @@ describe("Round-trip — null handling", () => {
 describe("Round-trip — custom identity via options", () => {
   it("identity: 'code'", () => {
     rtBoth(
-      [{ code: "X", v: 1 }, { code: "Y", v: 2 }],
-      [{ code: "X", v: 99 }, { code: "Y", v: 2 }],
+      [
+        { code: "X", v: 1 },
+        { code: "Y", v: 2 },
+      ],
+      [
+        { code: "X", v: 99 },
+        { code: "Y", v: 2 },
+      ],
       { identity: "code" },
     );
   });
@@ -416,10 +431,7 @@ describe("Round-trip — custom identity via options", () => {
   });
 
   it("default 'id' when no option passed", () => {
-    rtBoth(
-      [{ id: "alice", v: 1 }],
-      [{ id: "alice", v: 2 }],
-    );
+    rtBoth([{ id: "alice", v: 1 }], [{ id: "alice", v: 2 }]);
   });
 });
 
@@ -429,8 +441,14 @@ describe("Round-trip — custom identity via options", () => {
 
 describe("Round-trip — assertCollection inferred & validated", () => {
   it("homogeneous collection — diff carries $assertCollection: true", () => {
-    const a = [{ id: "alice", role: "user" }, { id: "bob", role: "user" }];
-    const b = [{ id: "alice", role: "admin" }, { id: "bob", role: "user" }];
+    const a = [
+      { id: "alice", role: "user" },
+      { id: "bob", role: "user" },
+    ];
+    const b = [
+      { id: "alice", role: "admin" },
+      { id: "bob", role: "user" },
+    ];
     const d = diffJson(a, b) as { $assertCollection?: boolean };
     expect(d.$assertCollection).toBe(true);
     expect(patchJson(a, d)).toEqual(b);
@@ -513,10 +531,7 @@ describe("Round-trip — edge cases", () => {
     rtBoth({ trick: "$remove" }, { trick: "different" });
   });
   it("unicode in keys", () => {
-    rtBoth(
-      { "日本語": 1, "🎉": "party" },
-      { "日本語": 2, "🎉": "party-time" },
-    );
+    rtBoth({ 日本語: 1, "🎉": "party" }, { 日本語: 2, "🎉": "party-time" });
   });
   it("unicode in array values", () => {
     rtBoth(["a", "日本語", "🎉"], ["日本語", "a", "🎉", "🚀"]);
@@ -754,7 +769,10 @@ describe("Round-trip — seeded fuzz on complex structures", () => {
         name: `User ${i}`,
         role: r() < 0.5 ? "user" : "admin",
         score: Math.floor(r() * 100),
-        tags: Array.from({ length: Math.floor(r() * 3) + 1 }, (_, j) => `t${j}`),
+        tags: Array.from(
+          { length: Math.floor(r() * 3) + 1 },
+          (_, j) => `t${j}`,
+        ),
       });
     }
     return {
@@ -767,7 +785,10 @@ describe("Round-trip — seeded fuzz on complex structures", () => {
           label: `label-${seed}`,
         },
       },
-      tags: Array.from({ length: Math.floor(r() * 5) + 1 }, (_, i) => `tag-${i}`),
+      tags: Array.from(
+        { length: Math.floor(r() * 5) + 1 },
+        (_, i) => `tag-${i}`,
+      ),
     };
   }
 
@@ -877,7 +898,9 @@ describe("Round-trip — diff stability (content-addressable)", () => {
   it("complex doc — same diff bit-by-bit across 10 invocations", () => {
     const a = baseline();
     const b = mutated();
-    const diffs = Array.from({ length: 10 }, () => JSON.stringify(diffJson(a, b)));
+    const diffs = Array.from({ length: 10 }, () =>
+      JSON.stringify(diffJson(a, b)),
+    );
     for (let i = 1; i < diffs.length; i++) {
       expect(diffs[i]).toBe(diffs[0]);
     }

@@ -235,12 +235,12 @@ violação estrutural, não inconsistência de conteúdo.
 
 ```ts
 // Full — diff + patch + algoritmo Myers + fingerprint (~9.5 KB ESM)
-import { diffJson, patchJson } from "@statedelta/json-myers";
+import { diffJson, patchJson } from "json-myers";
 
 // Patch-only — ~51% do bundle (~4.9 KB ESM). Sem diff, sem fingerprint,
 // sem Myers. Pra runtimes que só APLICAM patches recebidos (clientes,
 // launchers, ETL targets).
-import { patchJson } from "@statedelta/json-myers/patch";
+import { patchJson } from "json-myers/patch";
 ```
 
 A versão `/patch` exporta tudo o que o lado de aplicação precisa:
@@ -252,7 +252,7 @@ isso, use o entry principal.
 ### Diff
 
 ```ts
-import { diffJson, diffArray, diffObject } from "@statedelta/json-myers";
+import { diffJson, diffArray, diffObject } from "json-myers";
 
 // Top-level — despacha por tipo e produz patch aplicável.
 const patch: unknown = diffJson(a, b);
@@ -269,7 +269,7 @@ arrays, `{}` para objetos, `b` em si para primitivos).
 ### Patch
 
 ```ts
-import { patchJson } from "@statedelta/json-myers";
+import { patchJson } from "json-myers";
 
 const result = patchJson(base, diff);
 const strict = patchJson(base, diff, { strict: true });
@@ -283,7 +283,7 @@ const r = patchJson(base, diff, { identity: "code" });
 ### Diff com identity custom
 
 ```ts
-import { diffJson } from "@statedelta/json-myers";
+import { diffJson } from "json-myers";
 
 // Sem options — default identity "id" globalmente.
 const patch = diffJson(a, b);
@@ -300,7 +300,7 @@ array sem precisar de schema completo.
 ### Algoritmo core (uso direto)
 
 ```ts
-import { myers, type Edit, type EqFn } from "@statedelta/json-myers";
+import { myers, type Edit, type EqFn } from "json-myers";
 
 // Use diretamente Myers sobre qualquer T[] com função de igualdade.
 const edits: Edit<string>[] = myers(["a","b","c"], ["a","x","c"]);
@@ -314,7 +314,7 @@ const edits2 = myers(usersA, usersB, eq);
 ### Identidade — fingerprint
 
 ```ts
-import { fingerprintItem, hashValue } from "@statedelta/json-myers";
+import { fingerprintItem, hashValue } from "json-myers";
 
 fingerprintItem(42);                    // "p:n:42"
 fingerprintItem("hello");               // "p:s:hello"
@@ -339,7 +339,7 @@ import {
   isCollectionAssertionError,
   type StrictViolationCode,
   type CollectionAssertionCode,
-} from "@statedelta/json-myers";
+} from "json-myers";
 
 // R6 — $ops sobre não-array (sempre lança, independente de modo).
 try {
@@ -394,9 +394,9 @@ import type {
 
   // Myers core
   Edit, EqFn,
-} from "@statedelta/json-myers";
+} from "json-myers";
 
-import { DEFAULT_IDENTITY } from "@statedelta/json-myers";
+import { DEFAULT_IDENTITY } from "json-myers";
 // DEFAULT_IDENTITY === "id"
 ```
 

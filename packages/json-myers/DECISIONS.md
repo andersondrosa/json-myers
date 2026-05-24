@@ -1,7 +1,7 @@
 # json-myers — Registro de Decisões
 
 ADRs (Architecture Decision Records) de cada decisão séria tomada
-durante o design e a implementação do `@statedelta/json-myers`. Para
+durante o design e a implementação do `json-myers`. Para
 cada decisão, registra-se: **contexto**, **opções consideradas**,
 **decisão**, e **razão**. Inclui rejeições — porque saber *por que
 algo não foi feito* é tão importante quanto saber o que foi.
@@ -492,7 +492,7 @@ do monorepo `@statedelta`.
 
 - A. **Standalone** — repo próprio, npm direto.
 - B. **No monorepo statedelta** — `packages/json-myers/`, publicável
-  como `@statedelta/json-myers`.
+  como `json-myers`.
 
 **Decisão:** **B — no monorepo**.
 
@@ -897,12 +897,12 @@ se aplica patches é desperdício de bundle.
 **Opções:**
 
 - A. **Sub-path export** — mesmo package, mas
-  `@statedelta/json-myers/patch` é um entry-point separado com bundle
+  `json-myers/patch` é um entry-point separado com bundle
   reduzido.
 - B. **Packages separados** —
-  `@statedelta/json-myers-patch` +
-  `@statedelta/json-myers-diff` +
-  `@statedelta/json-myers-protocol`.
+  `json-myers-patch` +
+  `json-myers-diff` +
+  `json-myers-protocol`.
 - C. **Não fazer nada** — tree-shaking moderno cuida disso.
 
 **Decisão:** **A — sub-path export**.
@@ -916,7 +916,7 @@ se aplica patches é desperdício de bundle.
   usam o mesmo pattern (`firebase/firestore`, `lucide-react/icons`).
 - **Tree-shaking explícito** — bundlers que não tree-shake bem ainda
   beneficiam, porque o entry-point é fisicamente separado.
-- **Documentar é trivial** — `import from "@statedelta/json-myers/patch"`
+- **Documentar é trivial** — `import from "json-myers/patch"`
   é uma linha; auto-discoverable via DTS.
 
 **Configuração:**

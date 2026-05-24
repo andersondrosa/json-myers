@@ -81,7 +81,10 @@ describe("diffArray — primitives", () => {
 
 describe("diffArray — smart-keys (objects with id/key)", () => {
   it("identical smart-key array → empty $ops", () => {
-    const a = [{ id: "alice", v: 1 }, { id: "bob", v: 2 }];
+    const a = [
+      { id: "alice", v: 1 },
+      { id: "bob", v: 2 },
+    ];
     const diff = diffJson(a, a) as { $ops: unknown[] };
     expect(diff.$ops).toEqual([]);
     roundTrip(a, a);
@@ -104,7 +107,10 @@ describe("diffArray — smart-keys (objects with id/key)", () => {
 
   it("add a new smart-key item with payload", () => {
     const a = [{ id: "alice", role: "user" }];
-    const b = [{ id: "alice", role: "user" }, { id: "bob", role: "admin" }];
+    const b = [
+      { id: "alice", role: "user" },
+      { id: "bob", role: "admin" },
+    ];
     roundTrip(a, b);
   });
 
@@ -158,8 +164,14 @@ describe("diffArray — mixed item types", () => {
   });
 
   it("array of nested arrays", () => {
-    const a = [[1, 2], [3, 4]];
-    const b = [[1, 2], [5, 6]];
+    const a = [
+      [1, 2],
+      [3, 4],
+    ];
+    const b = [
+      [1, 2],
+      [5, 6],
+    ];
     roundTrip(a, b);
   });
 });
@@ -176,11 +188,17 @@ describe("diffArray — full pipeline through objects", () => {
   it("object with smart-key array — item updated", () => {
     const a = {
       name: "Project",
-      users: [{ id: "alice", role: "user" }, { id: "bob", role: "user" }],
+      users: [
+        { id: "alice", role: "user" },
+        { id: "bob", role: "user" },
+      ],
     };
     const b = {
       name: "Project",
-      users: [{ id: "alice", role: "admin" }, { id: "bob", role: "user" }],
+      users: [
+        { id: "alice", role: "admin" },
+        { id: "bob", role: "user" },
+      ],
     };
     roundTrip(a, b);
   });

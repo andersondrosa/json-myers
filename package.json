@@ -1,63 +1,53 @@
 {
-  "name": "json-myers",
-  "version": "2.0.0",
-  "description": "High-performance JSON diff/patch library using Myers algorithm with move detection and smart keys support",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-  "exports": {
-    "types": "./dist/index.d.ts",
-    "import": "./dist/index.mjs",
-    "require": "./dist/index.js"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
+  "name": "json-myers-monorepo",
+  "version": "0.0.0",
+  "description": "JSON diff/patch — Myers algorithm with identity-aware semantics. Monorepo housing json-myers (v3, current) and the legacy v2 implementation under old/.",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
-    "test": "vitest --run",
-    "test:coverage": "vitest --run --coverage",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+    "build": "pnpm --recursive --filter='json-myers' build",
+    "dev": "pnpm --parallel --recursive --filter='json-myers' dev",
+    "test": "pnpm --recursive --filter='json-myers' test",
+    "test:coverage": "pnpm --recursive --filter='json-myers' test:coverage",
+    "typecheck": "pnpm --recursive --filter='json-myers' typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .prettierignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\" --ignore-path .prettierignore",
+    "clean": "pnpm --recursive --filter='json-myers' clean",
+    "changeset": "changeset",
+    "changeset status": "changeset status",
+    "changeset version": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@changesets/cli": "^2.31.0",
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^24.10.1",
+    "@typescript-eslint/eslint-plugin": "^8.47.0",
+    "@typescript-eslint/parser": "^8.47.0",
     "@vitest/coverage-v8": "^4.0.13",
+    "@vitest/ui": "^4.0.13",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
     "prettier": "^3.6.2",
-    "tsup": "^8.0.1",
+    "tsup": "^8.5.1",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.50.1",
     "vitest": "^4.0.13"
   },
-  "files": [
-    "dist",
-    "public",
-    "README.md",
-    "LICENSE"
-  ],
-  "keywords": [
-    "json",
-    "diff",
-    "patch",
-    "myers",
-    "myers-algorithm",
-    "git-diff",
-    "deep-diff",
-    "json-diff",
-    "json-patch",
-    "smart-keys",
-    "array-diff",
-    "object-diff",
-    "move-detection",
-    "synchronization",
-    "versioning",
-    "undo-redo",
-    "rollback",
-    "history",
-    "typescript"
-  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "author": {
+    "name": "Anderson D. Rosa",
+    "email": "andersondrosa@outlook.com",
+    "url": "https://github.com/andersondrosa"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/andersondrosa/json-myers.git"
@@ -66,13 +56,5 @@
   "bugs": {
     "url": "https://github.com/andersondrosa/json-myers/issues"
   },
-  "license": "MIT",
-  "author": {
-    "name": "Anderson D. Rosa",
-    "email": "andersondrosa@outlook.com",
-    "url": "https://github.com/andersondrosa"
-  },
-  "engines": {
-    "node": ">=16.0.0"
-  }
+  "license": "MIT"
 }

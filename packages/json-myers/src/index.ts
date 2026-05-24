@@ -1,5 +1,5 @@
 /**
- * @statedelta/json-myers
+ * json-myers
  *
  * Clean-room implementation of the json-myers diff/patch contract,
  * built against the StateDelta conformance suite (R1–R6, v2 spec).

@@ -4,7 +4,7 @@ Spec executável do contrato que `json-myers` (e qualquer implementação que
 se proponha equivalente) deve satisfazer pra ser usada como `mergeStrategy:
 "myers"` no StateDelta.
 
-> Esta pasta é publicada junto com o package `@statedelta/json-myers` —
+> Esta pasta é publicada junto com o package `json-myers` —
 > outras implementações podem consumir os JSONs daqui pra validar
 > conformidade.
 
@@ -121,6 +121,6 @@ for (const c of reorder.cases) {
 | Implementação | merge (84 tests) | reorder (16 cases / 64 tests) |
 |---|---|---|
 | `json-myers` npm (1.0.3, spec v1) | parcial — falha R1, R2, R5-bulk, R6, R7, R8 | 15/16 (bug `move from:X to:X`) |
-| `@statedelta/json-myers` (workspace, spec v2) | **84/84 ✅** | **64/64 ✅** |
+| `json-myers` (workspace, spec v2) | **84/84 ✅** | **64/64 ✅** |
 
-A implementação local `@statedelta/json-myers` é a referência v2.
+A implementação local `json-myers` é a referência v2.

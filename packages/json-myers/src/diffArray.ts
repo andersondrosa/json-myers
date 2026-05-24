@@ -151,10 +151,7 @@ function inferAssertCollection(
   return true;
 }
 
-function isCollectionShape(
-  arr: readonly unknown[],
-  identity: string,
-): boolean {
+function isCollectionShape(arr: readonly unknown[], identity: string): boolean {
   if (arr.length === 0) return false; // empty arrays don't carry the assertion
   const seen = new Set<string>();
   for (const item of arr) {
