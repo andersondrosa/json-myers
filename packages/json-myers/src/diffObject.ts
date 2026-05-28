@@ -23,6 +23,7 @@ export function diffObject(
   a: Record<string, unknown>,
   b: Record<string, unknown>,
   identity: string,
+  cache?: WeakMap<object, string>,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   const removed: string[] = [];
@@ -42,7 +43,7 @@ export function diffObject(
       out[k] = b[k];
       continue;
     }
-    const sub = diffJsonInner(a[k], b[k], identity);
+    const sub = diffJsonInner(a[k], b[k], identity, cache);
     if (sub !== NO_CHANGE) {
       out[k] = sub;
     }

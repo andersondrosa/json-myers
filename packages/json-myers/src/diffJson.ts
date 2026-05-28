@@ -38,7 +38,12 @@ export function diffJson(
   options: DiffOptions = {},
 ): unknown {
   const identity = options.identity ?? DEFAULT_IDENTITY;
-  const d = diffJsonInner(a, b, identity);
+  // Per-call fingerprint cache when opted-in. WeakMap so unreferenced
+  // objects are GC'd after the call returns. Pure optimization for
+  // inputs with preserved JS references (immutable state managers);
+  // mathematically equivalent output regardless.
+  const cache = options.refCache ? new WeakMap<object, string>() : undefined;
+  const d = diffJsonInner(a, b, identity, cache);
   if (d === NO_CHANGE) {
     // Same content — return a no-op patch that's compatible with the
     // base's shape (R8: array diff carries `$ops`; object diff does
@@ -62,6 +67,7 @@ export function diffJsonInner(
   a: unknown,
   b: unknown,
   identity: string,
+  cache?: WeakMap<object, string>,
 ): unknown | NoChange {
   // Fast path: identical references or primitives compared by Object.is.
   if (Object.is(a, b)) return NO_CHANGE;
@@ -81,7 +87,7 @@ export function diffJsonInner(
   if (aIsObj !== bIsObj) return b;
 
   if (aArr && bArr) {
-    const d = diffArray(a as unknown[], b as unknown[], identity);
+    const d = diffArray(a as unknown[], b as unknown[], identity, cache);
     return isTrivialArrayDiff(d) ? NO_CHANGE : d;
   }
 
@@ -90,6 +96,7 @@ export function diffJsonInner(
       a as Record<string, unknown>,
       b as Record<string, unknown>,
       identity,
+      cache,
     );
     return isTrivialObjectDiff(d) ? NO_CHANGE : d;
   }

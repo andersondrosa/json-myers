@@ -1,0 +1,23 @@
+{
+  "name": "json-myers-bench",
+  "version": "0.0.0",
+  "description": "Diff-generation benchmark — json-myers vs RFC 6902 / RFC 7396 / jsondiffpatch.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "node --expose-gc --max-old-space-size=4096 --import tsx src/main.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "json-myers": "workspace:*",
+    "fast-json-patch": "^3.1.1",
+    "rfc6902": "^5.1.2",
+    "jsondiffpatch": "^0.6.0",
+    "tinybench": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3"
+  }
+}

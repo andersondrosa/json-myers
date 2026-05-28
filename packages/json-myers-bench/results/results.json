@@ -1,0 +1,932 @@
+[
+  {
+    "id": "01-array-reverse-100",
+    "title": "Array reorder puro — 100 objs com id, reverse total",
+    "category": "reorder",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 99,
+        "meanMs": 0.3003622395209569,
+        "medianMs": 0.25396999999998116,
+        "hz": 3611.3672192648114,
+        "samples": 334,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 99,
+        "meanMs": 0.3345023879598702,
+        "medianMs": 0.2647709999999961,
+        "hz": 3390.7263553347134,
+        "samples": 299,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 568,
+        "meanMs": 0.050818935975611254,
+        "medianMs": 0.03938450000003968,
+        "hz": 22952.91144152768,
+        "samples": 1968,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 555,
+        "meanMs": 75.07597000000003,
+        "medianMs": 63.047559999999976,
+        "hz": 13.94369910910919,
+        "samples": 3,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 99,
+        "meanMs": 1.0381242474226753,
+        "medianMs": 0.9439950000000863,
+        "hz": 996.748407423337,
+        "samples": 97,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "02-array-shuffle-and-update-100",
+    "title": "Reorder + nested update — 100 objs, shuffle + 5 updates",
+    "category": "reorder+update",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 84,
+        "meanMs": 0.27836711388888613,
+        "medianMs": 0.22946750000005522,
+        "hz": 3950.2482391138437,
+        "samples": 360,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 84,
+        "meanMs": 0.26894665053764377,
+        "medianMs": 0.2300040000000081,
+        "hz": 4003.00228230026,
+        "samples": 372,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 556,
+        "meanMs": 0.08058916035455209,
+        "medianMs": 0.043228999999882944,
+        "hz": 18949.947406725918,
+        "samples": 1241,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 545,
+        "meanMs": 71.6432916666666,
+        "medianMs": 66.37712499999998,
+        "hz": 14.172630553113104,
+        "samples": 3,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 88,
+        "meanMs": 0.9163390272727652,
+        "medianMs": 0.8338945000000422,
+        "hz": 1137.903421080544,
+        "samples": 110,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "03-array-shift-500",
+    "title": "Array médio reorder — 500 objs, shift left de 1",
+    "category": "reorder-large",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.26620095744681777,
+        "medianMs": 0.22816100000000006,
+        "hz": 4024.754641650438,
+        "samples": 376,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.3229506774193411,
+        "medianMs": 0.2613450000001194,
+        "hz": 3455.7233296543727,
+        "samples": 310,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 2748,
+        "meanMs": 0.22000858021977834,
+        "medianMs": 0.18421799999987343,
+        "hz": 5006.405593748218,
+        "samples": 455,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 2,
+        "meanMs": 1221.8062283333331,
+        "medianMs": 1259.6328119999998,
+        "hz": 0.820930580293846,
+        "samples": 3,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 15.908851428571714,
+        "medianMs": 16.0443350000005,
+        "hz": 62.933092135486085,
+        "samples": 7,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "04-array-sparse-mutation-1k",
+    "title": "Array grande mutação rala — 1.000 objs, 3 updates + 1 add",
+    "category": "sparse-large",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.5599809385474542,
+        "medianMs": 0.473705999998856,
+        "hz": 1953.1424380291176,
+        "samples": 179,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.5996882934132209,
+        "medianMs": 0.545496999999159,
+        "hz": 1727.535472391463,
+        "samples": 167,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 4,
+        "meanMs": 0.2725308310626341,
+        "medianMs": 0.23729399999865564,
+        "hz": 3920.4095105923266,
+        "samples": 367,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 4,
+        "meanMs": 18002.608833,
+        "medianMs": 18002.608833,
+        "hz": 0.055547504768693995,
+        "samples": 1,
+        "error": "slow (>1500ms) — single-sample only"
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 4,
+        "meanMs": 4.230536958333839,
+        "medianMs": 4.037957500002449,
+        "hz": 241.5499351201989,
+        "samples": 24,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "05-array-insert-middle",
+    "title": "Insert no meio — 50 → 51 objs, add no índice 25",
+    "category": "insert",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.027553306887069286,
+        "medianMs": 0.022300999999060878,
+        "hz": 41997.64878433092,
+        "samples": 3630,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.02790369810268751,
+        "medianMs": 0.02471450000120967,
+        "hz": 38815.0483475837,
+        "samples": 3584,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 137,
+        "meanMs": 0.021040824321509433,
+        "medianMs": 0.01694100000167964,
+        "hz": 55596.70325544204,
+        "samples": 4753,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 1.8026049999997926,
+        "medianMs": 1.5288670000009006,
+        "hz": 603.9437448767221,
+        "samples": 56,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.08124102761990107,
+        "medianMs": 0.06160000000090804,
+        "hz": 17289.318852690387,
+        "samples": 1231,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "06-smart-key-nested-update",
+    "title": "Smart-key nested update — 100 objs, role muda em 10",
+    "category": "nested-update",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 0,
+        "meanMs": 0.050815406504109824,
+        "medianMs": 0.04322699999829638,
+        "hz": 21550.500827011685,
+        "samples": 1968,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 0,
+        "meanMs": 0.054676372334559506,
+        "medianMs": 0.04910999999992782,
+        "hz": 19366.719048077477,
+        "samples": 1829,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 5,
+        "meanMs": 0.024086805154141765,
+        "medianMs": 0.022821999998996034,
+        "hz": 43046.62291684669,
+        "samples": 4152,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 5,
+        "meanMs": 25.75064200000088,
+        "medianMs": 25.866609500000777,
+        "hz": 38.95448032369672,
+        "samples": 4,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 5,
+        "meanMs": 0.08051763365537681,
+        "medianMs": 0.0709965000005468,
+        "hz": 13319.385980984232,
+        "samples": 1242,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "07-content-hash-array",
+    "title": "Content-hash array — 50 objs sem id, 5 mudados",
+    "category": "content-hash",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 8,
+        "meanMs": 0.06989920475186151,
+        "medianMs": 0.05438800000047195,
+        "hz": 16524.79507713918,
+        "samples": 1431,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 8,
+        "meanMs": 0.060551007869300795,
+        "medianMs": 0.05494849999922735,
+        "hz": 17501.73156645261,
+        "samples": 1652,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 4,
+        "meanMs": 0.012265519009086739,
+        "medianMs": 0.009991999999328982,
+        "hz": 94208.5053062199,
+        "samples": 8154,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 4,
+        "meanMs": 6.417784437499904,
+        "medianMs": 5.490388500000336,
+        "hz": 168.89899783481837,
+        "samples": 16,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 4,
+        "meanMs": 0.04417389355123221,
+        "medianMs": 0.03404850000151782,
+        "hz": 26546.45895156331,
+        "samples": 2264,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "08-flat-object-1-key",
+    "title": "Object plano — 10 keys, 1 update",
+    "category": "baseline",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.0007495695300205822,
+        "medianMs": 0.0004799999987881165,
+        "hz": 1836481.3924920254,
+        "samples": 133410,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.0005882529309645411,
+        "medianMs": 0.0004220000009809155,
+        "hz": 2103480.744464755,
+        "samples": 169995,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.0006174691698715452,
+        "medianMs": 0.000508999997691717,
+        "hz": 1918123.151813225,
+        "samples": 161952,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.0035551899175070463,
+        "medianMs": 0.003210999999282649,
+        "hz": 316667.2787529349,
+        "samples": 28128,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.0013206904434877082,
+        "medianMs": 0.0010780000011436641,
+        "hz": 871768.7268887495,
+        "samples": 75718,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "09-deeply-nested-leaf-change",
+    "title": "Object profundo aninhado — 5 níveis, mudança na folha",
+    "category": "nested",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.0007065973474448515,
+        "medianMs": 0.0005410000012489036,
+        "hz": 1680471.8377062364,
+        "samples": 141524,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.0006990596574560434,
+        "medianMs": 0.0005510000046342611,
+        "hz": 1697286.9528177981,
+        "samples": 143050,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.0005476861715117751,
+        "medianMs": 0.00043300000106683,
+        "hz": 2137918.6887220982,
+        "samples": 182587,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.0029035840422901487,
+        "medianMs": 0.0025569999997969717,
+        "hz": 376086.86475247116,
+        "samples": 34441,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.0023619751287102643,
+        "medianMs": 0.0017619999998714775,
+        "hz": 503467.9008831135,
+        "samples": 42338,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "10-mixed-array",
+    "title": "Mixed array — strings + objs + arrays, mudança em cada",
+    "category": "mixed",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 4,
+        "meanMs": 0.0025135760606793045,
+        "medianMs": 0.0018909999998868443,
+        "hz": 482101.3349494658,
+        "samples": 39784,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 4,
+        "meanMs": 0.002354135478726389,
+        "medianMs": 0.0021340000021154992,
+        "hz": 455638.5000478249,
+        "samples": 42479,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 3,
+        "meanMs": 0.0007905620469144644,
+        "medianMs": 0.0006219999995664693,
+        "hz": 1480107.954415445,
+        "samples": 126493,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 3,
+        "meanMs": 0.044654791517902075,
+        "medianMs": 0.035957000000053085,
+        "hz": 26002.096925500366,
+        "samples": 2240,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 4,
+        "meanMs": 0.004077870337907592,
+        "medianMs": 0.0030780000015511177,
+        "hz": 292155.090770934,
+        "samples": 24533,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "11-products-with-sku-reorder",
+    "title": "Products com identity custom (sku) — 200 objs reorder + 10 updates",
+    "category": "custom-identity",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 178,
+        "meanMs": 1.0896028913049003,
+        "medianMs": 0.9121830000040063,
+        "hz": 1001.1887143928809,
+        "samples": 92,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 178,
+        "meanMs": 1.5968944761907407,
+        "medianMs": 1.5720849999997881,
+        "hz": 726.9216769867734,
+        "samples": 63,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 1020,
+        "meanMs": 0.091628440476221,
+        "medianMs": 0.0760855000007723,
+        "hz": 11998.617633979158,
+        "samples": 1092,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 1006,
+        "meanMs": 316.62590933333314,
+        "medianMs": 306.695968,
+        "hz": 3.1690909249795087,
+        "samples": 3,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 188,
+        "meanMs": 3.8223861481482917,
+        "medianMs": 3.4111720000000787,
+        "hz": 271.00324979820897,
+        "samples": 27,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "12-array-remove-half",
+    "title": "Array — 200 objs, remove de 50%",
+    "category": "remove",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 100,
+        "meanMs": 0.2280043029612005,
+        "medianMs": 0.1806270000015502,
+        "hz": 5145.542811329364,
+        "samples": 439,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 100,
+        "meanMs": 0.24639513054181258,
+        "medianMs": 0.19186750000153552,
+        "hz": 4992.622716272877,
+        "samples": 406,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 645,
+        "meanMs": 0.04579580998170758,
+        "medianMs": 0.03937400000359048,
+        "hz": 24075.471509507708,
+        "samples": 2184,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 100,
+        "meanMs": 65.94059433333314,
+        "medianMs": 64.85702999999921,
+        "hz": 15.210549039683329,
+        "samples": 3,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 100,
+        "meanMs": 1.3160708026314656,
+        "medianMs": 1.2643220000027213,
+        "hz": 770.5213746591354,
+        "samples": 76,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "14-immutable-state-redux-style",
+    "title": "Estado imutável Redux/Immer-style — 1000 objs SEM id, 1 atualizado via spread",
+    "category": "ref-preserved",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 2,
+        "meanMs": 1.4674922173909852,
+        "medianMs": 1.2449740000010934,
+        "hz": 743.3068890088334,
+        "samples": 69,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 2,
+        "meanMs": 0.7674214427480149,
+        "medianMs": 0.6908069999990403,
+        "hz": 1360.8932932540843,
+        "samples": 131,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.06342297526954516,
+        "medianMs": 0.047962999997253064,
+        "hz": 18589.631059342893,
+        "samples": 1577,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 2381.9145290000015,
+        "medianMs": 2381.9145290000015,
+        "hz": 0.4198303456420956,
+        "samples": 1,
+        "error": "slow (>1500ms) — single-sample only"
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.12431538012422844,
+        "medianMs": 0.08028100000228733,
+        "hz": 10837.099881133005,
+        "samples": 805,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "15-multi-level-reorder-with-deep-change",
+    "title": "Triplo reorder + mudança profunda — array de users, cada um com array de childs",
+    "category": "nested-reorder",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.006421418518002106,
+        "medianMs": 0.004837500000576256,
+        "hz": 191347.59152578254,
+        "samples": 15574,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.006033513303177567,
+        "medianMs": 0.005267000000458211,
+        "hz": 183544.33021115145,
+        "samples": 16575,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 16,
+        "meanMs": 0.0027367348184229104,
+        "medianMs": 0.002144999998563435,
+        "hz": 443940.8707140398,
+        "samples": 36541,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 8,
+        "meanMs": 0.11892604875149494,
+        "medianMs": 0.10482400000182679,
+        "hz": 9053.126946710881,
+        "samples": 841,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 1,
+        "meanMs": 0.01227629744659912,
+        "medianMs": 0.01081799999519717,
+        "hz": 88951.23846901224,
+        "samples": 8146,
+        "error": null
+      }
+    ]
+  },
+  {
+    "id": "13-mutated-and-shuffled-no-identity",
+    "title": "Reorder + mutação SEM identity (sem id, sem refs compartilhadas)",
+    "category": "no-identity-shuffle",
+    "runs": [
+      {
+        "name": "myers",
+        "label": "json-myers",
+        "ok": true,
+        "opsCount": 172,
+        "meanMs": 0.3948853622045937,
+        "medianMs": 0.3086315000000468,
+        "hz": 2889.3179395908155,
+        "samples": 254,
+        "error": null
+      },
+      {
+        "name": "myers-refcache",
+        "label": "json-myers (refCache opt-in)",
+        "ok": true,
+        "opsCount": 172,
+        "meanMs": 0.3379098513513954,
+        "medianMs": 0.306158499995945,
+        "hz": 3095.8292201164845,
+        "samples": 296,
+        "error": null
+      },
+      {
+        "name": "fast-json-patch",
+        "label": "fast-json-patch (RFC 6902)",
+        "ok": true,
+        "opsCount": 452,
+        "meanMs": 0.0382712589900228,
+        "medianMs": 0.032579499998973915,
+        "hz": 29292.684343161247,
+        "samples": 2614,
+        "error": null
+      },
+      {
+        "name": "rfc6902",
+        "label": "rfc6902 (RFC 6902)",
+        "ok": true,
+        "opsCount": 425,
+        "meanMs": 55.954314666669234,
+        "medianMs": 53.319830000000366,
+        "hz": 17.98281710469214,
+        "samples": 3,
+        "error": null
+      },
+      {
+        "name": "jsondiffpatch",
+        "label": "jsondiffpatch (identity-aware via objectHash)",
+        "ok": true,
+        "opsCount": 99,
+        "meanMs": 0.1588885269842216,
+        "medianMs": 0.13986600000134786,
+        "hz": 6780.242464362487,
+        "samples": 630,
+        "error": null
+      }
+    ]
+  }
+]

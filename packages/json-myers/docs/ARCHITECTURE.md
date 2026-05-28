@@ -3,7 +3,7 @@
 Internals técnicos do pacote `json-myers`. Para a visão de
 alto nível e API pública, veja
 [`README.md`](../README.md). Para o registro de cada decisão de design
-(incluindo rejeições), veja [`DECISIONS.md`](../DECISIONS.md).
+(incluindo rejeições), veja [`DECISIONS.md`](./DECISIONS.md).
 
 ---
 
@@ -162,7 +162,8 @@ no-op apropriado pra forma).
              ▼
    ┌─────────────────────────┐
    │ walk edits, manter      │
-   │ aIdx / bIdx; pra cada:  │
+   │ aIdx / bIdx; emit       │
+   │ RawOp por edit:         │
    │                         │
    │ keep:                   │
    │   - smart-key? recurse  │
@@ -170,22 +171,49 @@ no-op apropriado pra forma).
    │   - else: skip          │
    │                         │
    │ del:                    │
-   │   - smart-key? emit     │
-   │     { remove, key }     │
-   │   - else: emit          │
-   │     { remove, index }   │
+   │   - smart-key? push     │
+   │     { del, fp, key }    │
+   │   - else: push          │
+   │     { del, fp, aIdx }   │
    │                         │
    │ ins:                    │
-   │   - smart-key? emit     │
-   │     { add, key, index } │
-   │     + seed em sibling   │
-   │   - else: emit          │
-   │     { add, index, item }│
+   │   - smart-key? push     │
+   │     { ins, fp, key,     │
+   │       bIdx, bItem }     │
+   │   - else: push          │
+   │     { ins, fp, bIdx,    │
+   │       bItem }           │
    └─────────┬───────────────┘
+             │
+             ▼
+   ┌─────────────────────────────────┐
+   │ coalesceMoves(raw, …) — O-001   │
+   │                                 │
+   │ 1. Bucket del/ins por fp        │
+   │ 2. Resolve pares (smart-key     │
+   │    only — positional move com   │
+   │    múltiplas ops corromperia    │
+   │    índices do patcher)          │
+   │ 3. Emit em raw-order:           │
+   │    - par smart-key → 1 move op  │
+   │      + nested = diffJsonInner(  │
+   │        a[del.aIdx], ins.bItem)  │
+   │    - unpaired → remove/add      │
+   │      standalone                 │
+   └─────────┬───────────────────────┘
              │
              ▼
    { $ops: [...], <key>: <subDiff>, ... }
 ```
+
+**O-001 (move generation)** — após o walk, `coalesceMoves` pareia
+`(del fp, ins fp)` com mesma fingerprint e emite uma única op `move`
+em vez de `remove + add`. Restrito a smart-key (positional move usa
+índices relativos ao estado intermediário do patcher, que muta entre
+moves — múltiplas ops posicionais corromperiam o resultado). O nested
+update do smart-key move usa `diffJsonInner` em vez do seed inteiro,
+produzindo wire mínimo: reorder puro (mesmo conteúdo) → nested omitido
+via `NO_CHANGE`; reorder + mudança → apenas o delta.
 
 ### Fluxo de `patchJson(base, diff)`
 
@@ -491,6 +519,46 @@ fingerprintItem({ key: "alice" })   // "#alice"
 O prefixo `"p:s:"` para strings garante que uma string literal
 `"#alice"` nunca colida com a smart-key `"#alice"`. Dispensa o
 "escape system" que o `json-myers` v1 precisava ter.
+
+### `refCache` — cache de fingerprint por ref (opt-in)
+
+```ts
+diffJson(a, b, { refCache: true });
+```
+
+Quando ativado, `diffJson` cria um `WeakMap<object, string>` que é
+propagado por toda a recursão (`diffArray`, `diffObject`,
+`fingerprintItem`, `fingerprintArray`). O fingerprint de cada objeto
+visitado é cacheado:
+
+```ts
+// fingerprint.ts — fast path no início de fingerprintItem
+if (cache && value !== null && typeof value === "object") {
+  const cached = cache.get(value as object);
+  if (cached !== undefined) return cached;  // ← skip hash recursion
+}
+// … computa fp normal, depois:
+if (cache && …) cache.set(value as object, fp);
+```
+
+Pura otimização: **output bit-idêntico** ao modo sem cache. Em
+inputs com referências preservadas (Redux/Immer/Zustand), o cache
+hit rate é alto e elimina recursão FNV-1a redundante. Em JSON
+desserializado, refs são sempre novas — cache miss dominante, ~50ns
+de overhead por lookup sem ganho.
+
+Distinção crítica vs `===` semântico do `jsondiffpatch`:
+
+| | `jsondiffpatch` (linha 20 de `matchItems`) | `refCache` |
+|---|---|---|
+| O que `ref` significa | "mesmo item" (semântica) | "mesmo fingerprint" (chave de cache) |
+| Se user muta in-place | Resultado errado (silenciosamente) | Cache stale, mas violou contrato declarado |
+| Determinismo | Depende do heap JS | Preservado (mesmo wire bit-a-bit) |
+| Opt-in? | Não — implícito | **Sim** — `{ refCache: true }` |
+| Funciona sem refs? | Cai pra posicional | Cache miss → calcula normal |
+
+WeakMap garante GC: ao fim da chamada `diffJson`, refs sem
+referência forte são liberadas. Sem leak.
 
 ---
 
@@ -848,11 +916,15 @@ dist/
 
 ## Limites conhecidos
 
-- **Sem otimização de `move`** na geração — `diffJson` emite
-  `remove + add` literal mesmo quando seria equivalente a um `move`.
-  Para smart-keys isso é transparente (o patcher trata como sugar);
-  para primitivos posicionais, o diff é apenas mais verboso, não
-  incorreto. Otimização futura.
+- **Coalescência de `move` é smart-key only** — pares `(del fp, ins fp)`
+  posicionais (primitivos / content-hash) **não** viram `move` na
+  geração; ficam como `remove + add` literal. Razão: positional move
+  resolve `from`/`to` contra o estado **atual** do `result` no patcher,
+  que muta entre cada move; emitir múltiplos positional moves com
+  índices de A original corromperia o resultado. Smart-key move
+  identifica items por chave, robusto a reordering intermediário.
+  Otimização posicional ficaria viável com simulação do estado do
+  patcher durante a geração — trabalho futuro.
 
 - **Myers com trace cheio** — `O((N+M)·D)` em espaço. Para arrays
   muito grandes (10k+ items com D alto), considerar versão
@@ -871,13 +943,22 @@ dist/
   ~1 em 4 bilhões. Em pipelines extremamente grandes, considerar
   upgrade para 64-bit (futuro).
 
+- **Wire format verboso** — `{"type":"move","key":"...","to":N}` custa
+  ~44 bytes/op vs ~16 bytes/op do `jsondiffpatch` (códigos numéricos).
+  Trade-off intencional: legibilidade, schema TypeScript expressivo,
+  debuggabilidade. **Gzipado**, a diferença cai pra ~30% (alta
+  repetição do wire comprime brutalmente). Em transporte real
+  irrelevante na maioria dos casos. Veja
+  [`packages/json-myers-bench/results/RESULTS.md`](../../json-myers-bench/results/RESULTS.md)
+  para números completos.
+
 ---
 
 ## Ver também
 
 - [`PHILOSOPHY.md`](../PHILOSOPHY.md) — visão, tese, conceitos, API,
   garantias
-- [`DECISIONS.md`](../DECISIONS.md) — registro de cada decisão tomada
+- [`DECISIONS.md`](./DECISIONS.md) — registro de cada decisão tomada
   e rejeitada, com contexto e razão
 - [`conformance/README.md`](../conformance/README.md) — spec
   executável

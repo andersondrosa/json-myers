@@ -297,6 +297,32 @@ Quando dois arrays no mesmo documento usam identities diferentes
 wire de cada array que precisa override — uma identity local por
 array sem precisar de schema completo.
 
+### Diff com `refCache` — modo FAST para estado imutável
+
+```ts
+import { diffJson } from "json-myers";
+
+// Opt-in: WeakMap cache de fingerprints por chamada.
+const patch = diffJson(a, b, { refCache: true });
+```
+
+Quando o input vem de uma lib de **estado imutável** (Redux, Zustand,
+Immer, MobX state tree), subárvores não-modificadas mantêm a
+referência JS original entre `a` e `b`. `refCache: true` aproveita
+isso: o `fingerprintItem` consulta um `WeakMap<object, string>` antes
+de computar — refs já vistas retornam o fingerprint cacheado em O(1),
+pulando a recursão FNV-1a inteira.
+
+**Pura otimização, não mudança semântica.** Output bit-idêntico ao
+modo sem cache; só economiza CPU quando há refs preservadas. Em JSON
+desserializado (refs sempre novas), adiciona ~50ns por lookup sem
+benefício — então é **opt-in**.
+
+Diferente do `===` semântico do `jsondiffpatch` (que trata "mesma ref"
+como "mesmo item" e quebra se você mutar in-place), o `refCache` usa
+ref apenas como **chave de cache do fingerprint**. Determinismo
+preservado, sem hack.
+
 ### Algoritmo core (uso direto)
 
 ```ts
@@ -488,13 +514,81 @@ A spec do `json-myers` é **executável**: as conformances JSON em
 
 ---
 
+## Benchmark vs RFC 6902 + jsondiffpatch
+
+Suíte de bench em `packages/json-myers-bench` compara `json-myers`
+contra `fast-json-patch`, `rfc6902` e `jsondiffpatch` em **15
+cenários**. **Escopo: performance de geração de diff em memória.**
+Tamanho do diff (bytes/gzip) e aplicação de patch estão **fora do
+escopo** — tamanho só importa quando você persiste/transporta, e
+aplicação tem semântica trivial.
+
+Métricas: **tempo de geração** (mediana via tinybench) + **ops
+emitidas** (contagem semântica, prova equivalência algorítmica).
+
+### Insights principais
+
+**1. vs RFC 6902 — myers domina em ops e em escala.** RFC produz
+**5–8× mais ops** que myers em arrays de objetos (sem smart-key, cada
+reorder vira N replaces). `rfc6902` leva **17 segundos** em 1.000
+items (LCS posicional O(NM)) — não escala.
+
+**2. vs jsondiffpatch — empate algorítmico.** Myers (do `git`) e LCS
+(do jsondiffpatch) resolvem o **mesmo problema**: `D = N + M − 2·LCS`.
+Em reverse de 100 items, ambos emitem **99 ops idênticas**. Tempo de
+geração também comparável. A diferença real está na **representação
+do output**, não na performance.
+
+**3. Vitória estrutural — funciona sem identity declarada.** Em JSON
+desserializado (sem `id`/`sku`/`key`, sem refs JS compartilhadas):
+apenas `json-myers` produz diff inteligente via **content-hash
+automático**. `jsondiffpatch` sem `objectHash` aplicável degrada
+para match-by-position (= RFC 6902). Vitória em **correção**, não em
+performance.
+
+**4. `refCache` 1.7× mais rápido em estado imutável** com output
+bit-idêntico. Cenário Redux/Immer-style com refs preservadas.
+
+**5. Legibilidade hierárquica — substantivos vs coordenadas.** Em
+diffs aninhados (`users.alice.childs.c1.name`), myers usa **smart-key
+em cada nível** — paths são identidades estáveis, autodocumentados.
+`jsondiffpatch` usa **índices POST-aplicação** (`users.1.childs.1.name`),
+exigindo que o leitor **simule mentalmente cada move prévio** pra
+mapear índice → item. Ambos round-tripam, mas em log de produção a
+diferença é debug de 5 minutos vs 1 hora:
+
+```jsonc
+// myers — qualquer humano lê e entende
+{
+  "users": {
+    "$ops": [{ "type": "move", "key": "frank", "to": 0 }],
+    "alice": { "childs": { "c1": { "name": "Bob CHANGED" } } }
+  }
+}
+
+// jsondiffpatch — "users.1" é alice? frank? depende do _2 acima
+{
+  "users": {
+    "1": { "childs": { "1": { "name": ["Bob", "Bob CHANGED"] } } },
+    "_2": ["", 0, 3]
+  }
+}
+```
+
+### Resultados completos
+
+Relatório com tabelas por cenário, gzip, ops counts, tempo:
+[`packages/json-myers-bench/results/RESULTS.md`](../json-myers-bench/results/RESULTS.md).
+
+---
+
 ## Documentação
 
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — internals técnicos:
   camadas, fluxos de `diff`/`patch`, implementação do Myers,
   complexidade, mutual recursion via ESM, performance
-- [`DECISIONS.md`](./DECISIONS.md) — ADRs de cada decisão de design
-  (27 tomadas, 5 em aberto) com contexto + opções consideradas + razão
+- [`docs/DECISIONS.md`](./docs/DECISIONS.md) — ADRs de cada decisão de design
+  (31 tomadas, 6 em aberto) com contexto + opções consideradas + razão
 - [`conformance/README.md`](./conformance/README.md) — spec
   executável (R1–R8 para `patch`, RD1–RD4 para `diff`); JSON publicado
   no npm pra consumo por outras implementações

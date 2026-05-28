@@ -6,8 +6,8 @@ cada decisão, registra-se: **contexto**, **opções consideradas**,
 **decisão**, e **razão**. Inclui rejeições — porque saber *por que
 algo não foi feito* é tão importante quanto saber o que foi.
 
-Para o panorama de design, veja [`README.md`](./README.md). Para
-internals, veja [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+Para o panorama de design, veja [`README.md`](../README.md). Para
+internals, veja [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
@@ -508,6 +508,12 @@ do monorepo `@statedelta`.
 
 ## D-018 — Sem otimização de `move` na geração — v0.1.0
 
+> **SUPERSEDED por [D-032](#d-032--implementação-de-o-001--coalescência-de-move-smart-key-only).**
+> Mantido aqui pelo registro histórico. A v3.x emitia `remove + add`
+> literal; bench contra `jsondiffpatch` mostrou que isso custava ~3.5×
+> em bytes raw em cenários de reorder. D-032 implementa a coalescência
+> de pares `(del fp, ins fp)` em ops `move`, restrito a smart-key.
+
 **Contexto:** uma reordenação `[A,B] → [B,A]` pode ser otimizada para
 1 op `move` em vez de `remove + add` (2 ops). Vale fazer essa
 otimização agora?
@@ -518,9 +524,9 @@ otimização agora?
 - B. **Deixar para depois** — emite `remove + add` literal; smart-keys
   são automaticamente "moves" via sugar.
 
-**Decisão:** **B — adiar**.
+**Decisão original (v0.1.0):** **B — adiar**.
 
-**Razão:**
+**Razão original:**
 - Correção é equivalente — `remove + add` aplica certo.
 - Smart-keys ganham efeito de move via sugar do patcher (não há perda
   de identidade).
@@ -528,9 +534,10 @@ otimização agora?
   com reordenação.
 - Conformance reorder passa 64/64 sem essa otimização.
 
-**Adiamento:** otimização será uma sub-fase 2.5 opcional, pegando os
-pares `(del fp, ins fp)` ao final do walk em `diffArray` e
-convertendo em ops `move`.
+**Por que mudou:** o adiamento estimou "~30% maior" para reorder, mas
+o bench empírico (`packages/json-myers-bench`) mostrou que em cenários
+de reorder massivo (reverse de 100 objs) o diff era **~3.5× maior**
+que o `jsondiffpatch`. A correção do adiamento veio em D-032.
 
 ---
 
@@ -945,15 +952,176 @@ bundle size com fração do custo de manutenção.
 
 ---
 
+## D-032 — Implementação de O-001 — coalescência de `move` smart-key only
+
+**Contexto:** [D-018](#d-018--sem-otimização-de-move-na-geração--v01)
+adiou a otimização de `move` na geração. Bench empírico
+(`packages/json-myers-bench`) revelou que, em cenários de reorder
+massivo (reverse de 100 objs), o diff myers ficava **~3.5× maior** que
+o `jsondiffpatch`. Hora de implementar O-001.
+
+**Opções:**
+
+- A. **Coalescência completa** (smart-key + positional) — detecta
+  pares `(del fp, ins fp)` em todos os casos e emite `move`. Positional
+  exige `from`/`to` válidos no estado intermediário do patcher.
+- B. **Smart-key only** — só pareia quando ambos lados são smart-key.
+  Positional fica como `remove + add` literal.
+- C. **Híbrido com simulação** — pra positional, simular o estado do
+  patcher durante a geração para computar índices corretos.
+
+**Decisão:** **B — smart-key only**.
+
+**Razão:**
+- Positional `move` no patcher resolve `from`/`to` contra o **estado
+  atual** de `result` (que muta entre cada move). Emitir múltiplos
+  positional moves com índices de A original corromperia o resultado.
+  Comprovado empiricamente: 13 testes de roundtrip de primitivos
+  quebraram quando a coalescência incluía positional.
+- Smart-key move identifica items por chave (sobrevive a reordering
+  intermediário) — pareamento é trivial e seguro.
+- Smart-key cobre o caso quente (collections de objetos com `id`),
+  que é onde a otimização realmente importa em bytes.
+- Positional move com simulação (C) seria ~150 LOC extras de máquina
+  de estado, sem ganho claro pro caso de uso primário.
+
+**Implementação:**
+
+1. Walk de `myers(fpA, fpB)` produz `RawOp[]` (não direto `Op[]`),
+   guardando `fp`, `aIdx`/`bIdx`, `key`, `bItem`.
+2. Função `coalesceMoves(raw, nested, a, identity, cache)` em 3
+   passes:
+   - **Pass 1**: bucket de del/ins por fingerprint.
+   - **Pass 2**: resolve pares (smart-key only — filtra `isSmartKeyFp`).
+   - **Pass 3**: emit em raw-order. Par smart-key → `{type:"move", key, to}`
+     + nested do delta. Unpaired → `remove`/`add` standalone.
+
+**Decisão adicional — nested via `diffJsonInner`:** quando um smart-key
+move pareia, o nested entry usa `diffJsonInner(a[del.aIdx], ins.bItem,
+identity, cache)` em vez do seed inteiro do item B.
+
+- Reorder puro (mesmo conteúdo) → `NO_CHANGE` → nested omitido.
+- Reorder + mudança → emite só o delta, não o item inteiro.
+
+Esse refinamento foi a maior parte do ganho de bytes — pares smart-key
+sem mudança de conteúdo (caso comum em reorder) ficam com **zero bytes
+de payload extra**, só a op `move`.
+
+**Resultado empírico (cenário `01-array-reverse-100`):**
+
+| Versão | Bytes raw | Bytes/op |
+|---|---|---|
+| Antes (D-018) | 20.560 B | 207.7 |
+| Após D-032 (move only) | 16.600 B | 167.7 |
+| Após D-032 (move + delta-nested) | 4.382 B | 44.3 |
+
+**Validação:** 450/450 testes da suite passando (conformance + git-eq +
+roundtrip fuzz). Nenhuma regressão.
+
+---
+
+## D-033 — `refCache` opt-in via WeakMap (modo FAST pra estado imutável)
+
+**Contexto:** bench mostrou que em cenário Redux/Immer-style (estado
+imutável onde refs JS são preservadas entre `a` e `b`), o myers gastava
+~5ms recomputando fingerprints FNV-1a para os mesmos objetos. O
+`jsondiffpatch` aproveita isso via `===` puro na linha 20 de
+`matchItems` — mas semanticamente trata "mesma ref" como "mesmo item",
+quebrando se o user mutar in-place.
+
+**Opções:**
+
+- A. **Match-by-ref puro** — copiar o hack do jsondiffpatch (`===`
+  como semântica de identidade). Quebra correção se user mutar.
+- B. **WeakMap cache de fingerprint, opt-in** — `ref` como **chave de
+  cache** do fingerprint computado. Mesmo output sempre, apenas mais
+  rápido quando refs preservam.
+- C. **Identity callback custom (estilo jsondiffpatch `objectHash`)** —
+  user fornece função que retorna identity. Mais flexível, mas
+  duplica superfície de API.
+- D. **Não fazer nada** — myers continua sempre recomputando.
+
+**Decisão:** **B — WeakMap cache opt-in**.
+
+**Razão:**
+- Distinção filosófica vs (A): ref é **chave de cache**, não
+  **semântica de igualdade**. Output bit-idêntico ao modo sem cache.
+- Se user mutar in-place, viola o contrato declarado ao opt-in
+  (`refCache: true` significa "garanto imutabilidade"). Diferente do
+  jsondiffpatch que mente silenciosamente.
+- Opt-in (não default) porque em JSON desserializado (refs sempre
+  novas), o cache adiciona ~50ns de lookup por chamada sem benefício.
+- (C) duplicaria o jeito jsondiffpatch de errar (esquecer de configurar
+  = degradação silenciosa). Myers já tem identity auto-detect +
+  `$identity` wire + `options.identity` — não precisa de mais um eixo.
+- (D) deixa o myers ~2× mais lento desnecessariamente no caso de uso
+  primário do `@statedelta/launcher` (lida com estados imutáveis).
+
+**Implementação:**
+
+- `DiffOptions.refCache?: boolean` — default `false`.
+- `diffJson` cria `WeakMap<object, string>` quando `true`, propaga via
+  novo parâmetro através de `diffJsonInner` → `diffArray`/`diffObject`
+  → `fingerprintItem`/`fingerprintArray`.
+- `fingerprintItem` fast-path no início:
+  ```ts
+  if (cache && value !== null && typeof value === "object") {
+    const cached = cache.get(value as object);
+    if (cached !== undefined) return cached;
+  }
+  ```
+- WeakMap garante GC: refs sem outras strong refs são liberadas ao
+  fim da chamada. Sem leak.
+
+**Resultado empírico (cenário 14 — Redux-style 1000 objs sem id):**
+
+| | Tempo (mediana) | Output |
+|---|---|---|
+| `diffJson(a, b)` | 1.466 ms | 165 B |
+| `diffJson(a, b, { refCache: true })` | 0.678 ms | 165 B |
+
+**1.7× mais rápido com output bit-idêntico.** Em cenários sem refs
+preservadas (JSON desserializado), overhead < 5%.
+
+**Não confundir com:**
+- `jsondiffpatch === hack`: usa ref como semântica. Quebra com mutação.
+- Match-by-ref puro: rejeitado em (A).
+
+`refCache` é estritamente **performance**, não **semântica**.
+
+---
+
 ## Decisões em aberto / futuras
 
 Decisões que não tomamos ainda mas estão na fila:
 
-### O-001 — Otimização de `move` na geração
+### O-007 — Otimização de positional `move` com simulação de patcher
 
-Atualmente `diffJson` emite `remove + add` literal. Detectar pares e
-converter em `move` reduz tamanho do diff. **Status:** adiada para
-sub-fase 2.5.
+[D-032](#d-032--implementação-de-o-001--coalescência-de-move-smart-key-only)
+restringiu a coalescência a smart-key. Positional `move` ainda emite
+`remove + add` literal. Para emitir positional `move`, seria necessário
+**simular o estado do patcher** durante a geração — uma máquina de
+estado que computa índices intermediários conforme cada move
+"hipotético" é aplicado. ~150 LOC, ganho específico de cenários onde
+arrays de primitivos/content-hash são reordenados. **Status:** sem
+demanda clara (smart-key cobre o caso quente); adiada.
+
+### O-008 — Wire format compacto opt-in
+
+Bench mostrou que o wire verbose do myers
+(`{"type":"move","key":"...","to":N}` ≈ 44 B/op) é ~3× maior em raw
+que o `jsondiffpatch` (códigos numéricos ≈ 16 B/op). Gzip neutraliza
+~70% da diferença, mas para pipelines sem compressão, um formato
+opt-in compacto seria interessante:
+
+```ts
+diffJson(a, b, { wireFormat: "compact" });
+// → { $ops: [["m", "alice", 3]], ... }  // ["m"|"a"|"r", key/index, to/item]
+```
+
+Trade-off: quebra wire compat com o formato padrão (precisa adapter
+no patcher). **Status:** sem demanda; adiada até evidência de pipeline
+real onde gzip não está disponível.
 
 ### O-002 — Hash 64-bit
 

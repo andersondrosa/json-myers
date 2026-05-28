@@ -43,35 +43,62 @@
  *                  values are accepted as identity — other types fall
  *                  back to content hash.
  */
-export function fingerprintItem(value: unknown, identity = "id"): string {
-  if (value === null) return "p:null";
-
-  switch (typeof value) {
-    case "string":
-      return "p:s:" + value;
-    case "number":
-      return "p:n:" + numberRepr(value);
-    case "boolean":
-      return value ? "p:b:1" : "p:b:0";
-    case "object":
-      break; // fall through to object/array handling
-    default:
-      // bigint, symbol, function, undefined — not JSON; treat as opaque hash.
-      return "p:x:" + String(value);
+export function fingerprintItem(
+  value: unknown,
+  identity = "id",
+  cache?: WeakMap<object, string>,
+): string {
+  // Fast path — when a per-call cache is provided AND the value is an
+  // object reference we've seen before in this call, return the
+  // previously-computed fingerprint without recursing. Pure
+  // optimization: same bytes, same determinism.
+  //
+  // Only meaningful with immutable-state inputs (Redux/Immer-style)
+  // where unchanged subtrees keep their JS references. For JSON
+  // freshly parsed from a string, every object is new — cache misses
+  // dominate and the WeakMap lookup is wasted (~50ns).
+  if (cache && value !== null && typeof value === "object") {
+    const cached = cache.get(value as object);
+    if (cached !== undefined) return cached;
   }
 
-  // ── array ────────────────────────────────────────────────────────
-  if (Array.isArray(value)) {
-    return "h:" + hashToHex(value);
+  let fp: string;
+  if (value === null) {
+    fp = "p:null";
+  } else {
+    switch (typeof value) {
+      case "string":
+        fp = "p:s:" + value;
+        break;
+      case "number":
+        fp = "p:n:" + numberRepr(value);
+        break;
+      case "boolean":
+        fp = value ? "p:b:1" : "p:b:0";
+        break;
+      case "object":
+        if (Array.isArray(value)) {
+          fp = "h:" + hashToHex(value);
+        } else {
+          const obj = value as Record<string, unknown>;
+          const id = obj[identity];
+          if (typeof id === "string" || typeof id === "number") {
+            fp = "#" + String(id);
+          } else {
+            fp = "h:" + hashToHex(obj);
+          }
+        }
+        break;
+      default:
+        // bigint, symbol, function, undefined — not JSON; treat as opaque.
+        fp = "p:x:" + String(value);
+    }
   }
 
-  // ── object ───────────────────────────────────────────────────────
-  const obj = value as Record<string, unknown>;
-  const id = obj[identity];
-  if (typeof id === "string" || typeof id === "number") {
-    return "#" + String(id);
+  if (cache && value !== null && typeof value === "object") {
+    cache.set(value as object, fp);
   }
-  return "h:" + hashToHex(obj);
+  return fp;
 }
 
 /**
@@ -86,11 +113,12 @@ export function fingerprintItem(value: unknown, identity = "id"): string {
 export function fingerprintArray(
   arr: readonly unknown[],
   identity = "id",
+  cache?: WeakMap<object, string>,
 ): string[] {
   const out: string[] = new Array(arr.length);
   const seenSmartKeys = new Set<string>();
   for (let i = 0; i < arr.length; i++) {
-    const fp = fingerprintItem(arr[i], identity);
+    const fp = fingerprintItem(arr[i], identity, cache);
     if (fp.length > 0 && fp.charCodeAt(0) === 0x23 /* '#' */) {
       if (seenSmartKeys.has(fp)) {
         // Duplicate smart-key in the same array → fall back to content

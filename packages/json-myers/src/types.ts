@@ -158,6 +158,24 @@ export interface DiffOptions {
    * identity is planned for v4.x.
    */
   readonly identity?: string;
+
+  /**
+   * Opt-in fingerprint cache via per-call `WeakMap<object, string>`.
+   * When `true`, object/array fingerprints computed during this call
+   * are cached by reference — subsequent encounters of the same JS
+   * reference skip the FNV-1a recursion entirely.
+   *
+   * Pure optimization, not a semantic change: same diff bytes, same
+   * determinism. Only pays off when the input has **preserved
+   * references** between `a` and `b` — typical of immutable state
+   * managers (Redux, Zustand, Immer, MobX state tree) where untouched
+   * subtrees keep their original instance.
+   *
+   * Trade-off: adds a WeakMap lookup (~50ns) per fingerprint call when
+   * enabled. Zero benefit (and slight overhead) on JSON deserialized
+   * via `JSON.parse` — refs are always fresh there. Default `false`.
+   */
+  readonly refCache?: boolean;
 }
 
 // ── Errors ───────────────────────────────────────────────────────────
