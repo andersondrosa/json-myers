@@ -21,10 +21,21 @@
  * The identity field is resolved per call: `diff.$identity` wins over
  * `options.identity`, which wins over `DEFAULT_IDENTITY` (`"id"`).
  *
- * When `diff.$assertCollection: true`, the base array is pre-validated
- * (every item is a plain object with the declared identity, no
- * duplicates) — `CollectionAssertionError` on violation. After
- * validation, the algorithm operates in a fast path.
+ * Two identity modes coexist:
+ *   - Smart-key mode (default) — items carry an identity field; lookup
+ *     is by value. Hot paths use a precomputed `Map<smartKey, index>`
+ *     to avoid the O(N·M) cost of linear scans when there are many
+ *     nested updates or smart-key ops.
+ *   - Positional mode (`$identity === POSITIONAL_IDENTITY`) — used for
+ *     Nd matrices and any array where index IS the identity. Sibling
+ *     keys are parsed as numeric indices, `$assertCollection` is
+ *     silenced. The dispatch closures (`findInBase`, `findInResult`)
+ *     are built once per call to keep this path zero-cost when unused.
+ *
+ * When `diff.$assertCollection: true` AND the array is NOT positional,
+ * the base array is pre-validated (every item is a plain object with
+ * the declared identity, no duplicates) — `CollectionAssertionError` on
+ * violation. After validation, the algorithm operates in a fast path.
  *
  * In strict mode, every divergence (missing key, out-of-range index,
  * no-op move, key collision on add, missed nested-update key) is
@@ -40,6 +51,7 @@ import type {
 } from "./types.js";
 import {
   DEFAULT_IDENTITY,
+  POSITIONAL_IDENTITY,
   StrictViolationError,
   CollectionAssertionError,
 } from "./types.js";
@@ -70,6 +82,29 @@ function indexOfSmartKey(
     if (smartKeyOf(arr[i], identity) === lookupKey) return i;
   }
   return -1;
+}
+
+/**
+ * Build a `Map<smartKey, index>` over an array — O(N) construction, O(1)
+ * lookups. Used by the smart-key hot paths (partition, Phase 1 removes,
+ * Phase 4 nested updates) to avoid repeated O(N) scans when there are
+ * many ops or sibling updates over the same array.
+ *
+ * If two items share an identity value, the FIRST one wins (matches
+ * `indexOfSmartKey` which returns the first match). `$assertCollection`
+ * forbids duplicates and runs before this builder, so in asserted
+ * collections the situation is structurally prevented.
+ */
+function buildKeyIndex(
+  arr: readonly unknown[],
+  identity: string,
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (let i = 0; i < arr.length; i++) {
+    const k = smartKeyOf(arr[i], identity);
+    if (k !== undefined && !map.has(k)) map.set(k, i);
+  }
+  return map;
 }
 
 /**
@@ -149,11 +184,29 @@ export function applyArrayOps(
     typeof diff.$identity === "string"
       ? diff.$identity
       : (options.identity ?? DEFAULT_IDENTITY);
+  const isPositional = identity === POSITIONAL_IDENTITY;
 
-  // Collection assertion — pre-validate base shape.
-  if (diff.$assertCollection === true) {
+  // Collection assertion — pre-validate base shape. Silenced in
+  // positional mode (a positional array is not a homogeneous-identity
+  // collection by definition; the two markers combined are
+  // structurally incoherent — we tolerate rather than throw).
+  if (diff.$assertCollection === true && !isPositional) {
     assertCollection(base, identity);
   }
+
+  // Dispatch one-shot for base lookups — built once per call so the
+  // smart-key hot path (`baseMap.get`) and the positional path
+  // (`Number(key)` parse) each carry zero per-iteration branching.
+  // The positional closure inlines the integer-parse + range check;
+  // the smart-key closure consults a precomputed Map (O(1) per lookup
+  // versus O(N) of the previous indexOfSmartKey scan).
+  const baseMap = isPositional ? null : buildKeyIndex(base, identity);
+  const findInBase: (key: string) => number = isPositional
+    ? (key) => {
+        const n = Number(key);
+        return Number.isInteger(n) && n >= 0 && n < base.length ? n : -1;
+      }
+    : (key) => baseMap!.get(key) ?? -1;
 
   const ops = diff.$ops;
 
@@ -173,7 +226,7 @@ export function applyArrayOps(
       // move
       if ("key" in op) {
         // Resolve up front: is the key present in the base array?
-        const currentIdx = indexOfSmartKey(base, op.key, identity);
+        const currentIdx = findInBase(op.key);
         if (currentIdx < 0) {
           if (strict) {
             throw new StrictViolationError(
@@ -217,10 +270,13 @@ export function applyArrayOps(
   const removedByKey = new Map<string, unknown>();
 
   // ── 1. Removes ───────────────────────────────────────────────────
+  // `result` here is still a shallow copy of `base` (mutations happen
+  // in the descending splice pass below) — `findInBase` is safe to
+  // reuse.
   const resolvedRemoves: { op: RemoveOp; index: number }[] = [];
   for (const op of removes) {
     if ("key" in op) {
-      const idx = indexOfSmartKey(result, op.key, identity);
+      const idx = findInBase(op.key);
       if (idx < 0) {
         if (strict) {
           throw new StrictViolationError(
@@ -309,9 +365,20 @@ export function applyArrayOps(
   }
 
   // ── 4. Nested updates by smart-key ───────────────────────────────
+  // `result` has been fully mutated by Phases 1–3 — rebuild the lookup
+  // map over its post-mutation state. Positional mode bypasses the Map
+  // entirely (sibling keys are numeric indices).
+  const resultMap = isPositional ? null : buildKeyIndex(result, identity);
+  const findInResult: (key: string) => number = isPositional
+    ? (key) => {
+        const n = Number(key);
+        return Number.isInteger(n) && n >= 0 && n < result.length ? n : -1;
+      }
+    : (key) => resultMap!.get(key) ?? -1;
+
   for (const [k, v] of Object.entries(diff)) {
     if (MARKER_KEYS.has(k)) continue;
-    const idx = indexOfSmartKey(result, k, identity);
+    const idx = findInResult(k);
     if (idx < 0) {
       if (strict) {
         throw new StrictViolationError(

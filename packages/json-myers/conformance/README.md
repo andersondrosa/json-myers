@@ -73,6 +73,19 @@ equivalente a `move key=X to=N` — identidade do item é preservada.
     `COLLECTION_MISSING_IDENTITY`, `COLLECTION_DUPLICATE_IDENTITY`).
     Sempre lança (independente de strict mode). Inferido
     automaticamente pelo `diffJson`.
+11. **R11 — Identidade posicional (`$identity: ":index"`).** Valor
+    reservado de identity pra arrays onde o **índice é a identidade**
+    (matrizes Nd, grids, qualquer estrutura posicional pura). Quando
+    `$identity` é `:index`, sibling keys do nested update são índices
+    numéricos (`result[Number(key)]`); chaves fora de range,
+    fracionárias, negativas ou não-numéricas degradam como
+    smart-key-miss (silent skip em normal, `KEY_NOT_FOUND` em strict).
+    `$assertCollection` é silenciada (incoerente com posicional).
+    `$ops` posicional (`{type:'add', index, item}` etc) opera
+    inalterado. Recursão é genuína — Nd matrizes aninham repetindo
+    `$identity: ":index"` em cada nível. Declarável via wire; não
+    inferido por `diffJson` em v3.x (gerador é o consumidor —
+    StateMatrix etc).
 
 ## Como rodar a merge conformance
 
@@ -118,9 +131,9 @@ for (const c of reorder.cases) {
 
 ## Status
 
-| Implementação | merge (84 tests) | reorder (16 cases / 64 tests) |
+| Implementação | merge (94 cases / 107 tests) | reorder (16 cases / 64 tests) |
 |---|---|---|
-| `json-myers` npm (1.0.3, spec v1) | parcial — falha R1, R2, R5-bulk, R6, R7, R8 | 15/16 (bug `move from:X to:X`) |
-| `json-myers` (workspace, spec v2) | **84/84 ✅** | **64/64 ✅** |
+| `json-myers` npm (1.0.3, spec v1) | parcial — falha R1, R2, R5-bulk, R6, R7, R8, R9–R11 | 15/16 (bug `move from:X to:X`) |
+| `json-myers` (workspace, spec v3) | **107/107 ✅** | **64/64 ✅** |
 
 A implementação local `json-myers` é a referência v2.

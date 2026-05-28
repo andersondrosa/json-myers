@@ -127,6 +127,30 @@ export type Diff = unknown;
 /** Default identity field name when none is declared. */
 export const DEFAULT_IDENTITY = "id" as const;
 
+/**
+ * Reserved identity for positional arrays — used by Nd matrices and
+ * any container where the index IS the identity. Declared per-array
+ * via `$identity: ":index"` in the wire.
+ *
+ * Semantics in the patcher when `identity === POSITIONAL_IDENTITY`:
+ *
+ *   - Nested-update sibling keys are interpreted as numeric indices.
+ *     `{ "$ops": [], "$identity": ":index", "2": <subDiff> }` patches
+ *     `result[2]` directly via `patchJson` (no smart-key lookup).
+ *   - Non-integer or out-of-range sibling keys behave like a missed
+ *     smart-key lookup (silent skip in normal mode, `KEY_NOT_FOUND`
+ *     in strict mode).
+ *   - `$assertCollection` is silenced — positional arrays are not
+ *     homogeneous-identity collections by definition.
+ *   - Positional `$ops` (`{type: "add", index, item}` etc) apply
+ *     unchanged — they are already index-based.
+ *
+ * The leading `:` marks this as a reserved identity (no real object
+ * field would be named `:index`), keeping it disjoint from the
+ * user-field namespace (`id`, `key`, `sku`, ...).
+ */
+export const POSITIONAL_IDENTITY = ":index" as const;
+
 /** Options for `patchJson`. */
 export interface PatchOptions {
   /**

@@ -1,5 +1,59 @@
 # json-myers
 
+## 3.2.0
+
+### Minor Changes
+
+- Add `$identity: ":index"` for Nd matrices and Map-based smart-key lookup
+  in the patcher.
+
+  **Changes:**
+  - **D-034 — `POSITIONAL_IDENTITY` (`":index"`)**: reserved identity
+    value for arrays where the index IS the identity (Nd matrices,
+    grids, boards). When an array-diff carries `$identity: ":index"`,
+    the patcher routes nested-update sibling keys as numeric indices
+    (`result[Number(key)]`) instead of by smart-key lookup. Recursion
+    is genuine — Nd matrices nest by repeating the marker. Non-integer,
+    negative, fractional or out-of-range sibling keys degrade as
+    smart-key-miss (silent skip in normal, `KEY_NOT_FOUND` in strict).
+    `$assertCollection` is silenced in positional mode (a matrix is not
+    a homogeneous-identity collection). Positional `$ops` operate
+    unchanged. Scope: patcher only — `diffJson` does not auto-detect
+    matrices (emitters like StateMatrix declare in the wire).
+  - **D-035 — Map-based smart-key lookup**: 3 hot paths in
+    `applyArrayOps` that did linear `indexOfSmartKey` scans (smart-key
+    move partition, Phase 1 remove resolution, Phase 4 nested updates)
+    now use a precomputed `Map<smartKey, index>`. Reduces lookup
+    complexity from O(N·M) to O(N+M). Empirical impact on total apply
+    time is ~3–4× (lookup was ~5% of total work; the rest is `patchJson`
+    recursion). Universal — every smart-key user benefits, not just
+    `:index`. Strict mode has **zero overhead** on the happy path.
+  - **Wire format extended**: `$identity` accepts the reserved value
+    `":index"`. Existing diffs continue to apply correctly.
+
+  **API additions:**
+  - `POSITIONAL_IDENTITY` constant exported from `json-myers` and
+    `json-myers/patch` (value: `":index"`).
+
+  **Conformance:** new rule **R11** (matrix-positional) with 10 cases
+  (12 tests including strict double-mode). Total: **107/107** merge
+  cases passing (was 95/95).
+
+  **Tests:** 483/483 passing (was 471/471) — 12 new conformance + 21
+  new unit tests covering 2D/3D cell edit, edge cases (NaN, negatives,
+  fractional indices, out-of-range), composition with `$ops` and
+  smart-key objects, `$assertCollection` silenced, regression guard
+  for smart-key default path.
+
+  **Bench:** new patch-side bench in `packages/json-myers-bench`
+  (`pnpm bench:patch`). See
+  `packages/json-myers-bench/results/PATCH-RESULTS.md` for empirical
+  validation of D-034 and D-035 across 11 scenarios.
+
+  **Docs updated:** README, ARCHITECTURE, and DECISIONS (D-034, D-035,
+  O-009, O-010) reflect the new identity mode, the algorithmic
+  optimization, and honest empirical numbers.
+
 ## 3.1.0
 
 ### Minor Changes

@@ -1091,6 +1091,234 @@ preservadas (JSON desserializado), overhead < 5%.
 
 ---
 
+## D-034 — `POSITIONAL_IDENTITY` (`":index"`) para matrizes Nd
+
+**Contexto:** o modelo de identidade da v3 cobre 3 flavors (primitivo
+por valor, smart-key declarada, content-hash). Matrizes 2D+ caem na 3ª
+categoria por default — cada linha vira `"h:<hash>"`. Resultado: mudar
+uma única célula `matrix[i][j]` faz a linha inteira virar "outra"
+(hash diferente), e o `diff` emite `remove + add` da linha inteira no
+wire. Mesmo problema com qualquer container onde **a posição é a
+identidade** (grids, boards, tabelas densas, pixels).
+
+Anderson trouxe o reframe: em matriz **posição não muda** (reorder de
+matriz é "todos os itens da linha 2 mudaram para virar os da linha 1"
+= edição celular massiva). E o caso de uso real do `json-myers` aqui é
+**aplicar patches gerados externamente** (o `StateMatrix` ou
+equivalente gera; `patchJson` aplica) — não inferir matriz a partir do
+diff genérico.
+
+**Opções consideradas:**
+
+- A. **Flatten + `$shape: [N, M]`** — achata matriz 2D em array linear,
+  faz diff posicional padrão. Funciona em 2D denso. Quebra em 3D+,
+  insert/remove de coluna vira diff esparso indecifrável, célula
+  smart-key não compõe sem regras novas, adiciona fase de
+  reshape/unshape no patcher.
+- B. **Marker `$matrix` de primeira classe** — wire dedicado com
+  `cells[]`, `rowOps[]`, `shape`. Bonito mas marker estrutural novo,
+  fase nova no patcher, composição com smart-key requer regras
+  separadas.
+- C. **Schema v4** — declara forma do documento, identity por path.
+  Caro; adiado em D-030.
+- D. **`$identity: ":index"` reservado** — recursão genuína usando
+  pipeline existente. Sibling keys do nested update viram índices
+  numéricos. Composição livre com o resto do wire. Nd via repetição.
+
+**Decisão:** **D — `POSITIONAL_IDENTITY = ":index"` reservado**.
+
+**Razão:**
+
+- Reusa **toda** a infraestrutura existente — sibling-update por
+  smart-key, fase 4 do `applyArrayOps`, resolução de identity 3-level.
+  Único ponto novo: branch de lookup que parseia key como número e
+  acessa `result[n]` direto.
+- **Recursão Nd é livre** — 2D = 2 níveis de `$identity: ":index"`,
+  3D = 3, Nd = N. Sem regra especial.
+- **Composição vence flatten** — célula que é objeto com smart-key
+  recursa normalmente; matriz dentro de objeto pai recursa
+  normalmente; `$ops` posicional pra add/remove de linha funciona sem
+  invenção.
+- **Add/remove de coluna** funciona como N nested updates, cada um
+  com `$ops` posicional no nível interno (vs flatten que viraria
+  diff esparso de 4 inserções não-contíguas, ininterpretável).
+- **Prefixo `:` marca reservado** — sem colisão com user-field
+  namespace (`id`, `key`, `sku`, ...). Generaliza pra outros
+  reservados futuros (`":hash"`, `":path"`, etc) sem proliferação de
+  options.
+
+**Regras semânticas em modo posicional:**
+
+1. Sibling keys do nested update parseiam como `Number(key)` —
+   `Number.isInteger(n) && n >= 0 && n < length` valida.
+2. Inválidas (NaN, negativos, fracionários, fora de range) degradam
+   como smart-key-miss: silent skip em normal, `KEY_NOT_FOUND` em
+   strict.
+3. `$assertCollection` é **silenciada** quando identity é `:index` —
+   matriz posicional não é collection homogênea com identity
+   declarada; as duas markers combinadas seriam estruturalmente
+   incoerentes. Toleramos em vez de lançar.
+4. `$ops` posicional (`{type:"add", index, item}` etc) opera
+   inalterado — não interage com a identidade.
+5. Smart-key ops (`{type:"add", key, ...}`) num array com `:index`
+   degradam graciosamente: `key` é interpretado como índice
+   stringificado pelo dispatch de lookup; no caminho normal isso é
+   irrelevante (StateMatrix não emite smart-key ops em arrays
+   posicionais).
+
+**Escopo da v3.x:** apenas **patcher** + tipos + wire. `diffJson` não
+emite `:index` automaticamente — o gerador é o consumidor (StateMatrix
+etc). Auto-detect de matriz no diff fica pra futuro se aparecer
+demanda (heurística é frágil; explicit > inferred pra forma).
+
+**Cristalizado como R11** na conformance, categoria
+`matrix-positional`, 10 casos (12 testes com strict double-mode).
+
+**Validação empírica ([`PATCH-RESULTS.md`](../../json-myers-bench/results/PATCH-RESULTS.md)):**
+
+| Cenário | Tempo (mediana) |
+|---|---|
+| Matriz 2D 10×10, 1 cell edit | 625 ns |
+| Matriz 2D 100×100, 1 cell edit | 980 ns |
+| Matriz 2D 1000×1000, 1 cell edit | 2.51 µs |
+| Cubo 3D 50×50×50, 1 cell edit | 1.10 µs |
+| Matriz 2D 100×100, 100 cells edit (diagonal) | 48.39 µs |
+
+**Custo real é O(N+M), não O(1).** Cada nível faz `[...base]`
+(shallow copy do array externo) ao entrar em `applyArrayOps:266`.
+Pra cell-edit em matriz N×M são duas shallow copies — N refs no
+externo + M no interno editado, não copia a matriz inteira. Cubo 3D
+50×50×50 (125k elementos) é **mais rápido** que matriz 2D 1000×1000
+(1M elementos) porque o custo escala com **largura** do array em cada
+nível, não com **profundidade** — profundidade é praticamente
+gratuita.
+
+A narrativa original deste ADR (rascunho pré-bench) dizia "custo é
+função da profundidade". Foi corrigido após medição: **profundidade
+é barata, largura é o que custa** (ainda assim O(N+M), não O(N·M)
+— magnitudes melhor que reconstruir a matriz). Tempo absoluto é
+muito bom — sub-µs em matrizes pequenas, ~2.5µs em 1000×1000.
+
+---
+
+## D-035 — Map-based lookup pra eliminar O(N·M) nos hot paths
+
+**Contexto:** durante a implementação de D-034, descobriu-se que o
+`applyArrayOps` original tinha um O(N·M) escondido na fase 4
+(nested updates por smart-key): pra cada sibling-key do diff,
+chamava `indexOfSmartKey(result, k, identity)` que faz scan linear
+O(N). Em array de 1000 items com 50 nested updates: 50.000
+comparações. Mesmo padrão na partição de smart-key moves (linha
+176) e Pass A da fase 1 (resolução de smart-key removes).
+
+Anderson levantou um princípio paralelo: **opt-in zero-cost** — se o
+usuário não configurou `:index`, não deve pagar por ele.
+
+**Opções:**
+
+- A. **Branch in-place em `indexOfSmartKey`** — `if (identity === ":index")` no início. Custo: 1 comparação de string por chamada, mesmo em smart-key default. Viola o princípio (default paga).
+- B. **Dispatch one-shot + Map de lookup** — closure construída uma vez por `applyArrayOps`, despachando entre `lookupPositional` (`:index`) e `Map<smartKey, index>.get` (default). Default ganha O(N+M) em vez de O(N·M); `:index` zero-cost.
+- C. **AOT especializado** — duas versões físicas de `applyArrayOps`. Zero overhead em runtime, mas duplica ~200 LOC + roda conformance em ambas.
+- D. **Codegen runtime (`new Function`)** — gera versão otimizada por config. Quebra CSP/Workers — fora.
+
+**Decisão:** **B — dispatch one-shot + Map**.
+
+**Razão:**
+
+- **Resolve dois problemas com uma mudança**: princípio do opt-in
+  zero-cost (`:index` não polui o default) E gargalo algorítmico
+  O(N·M) → O(N+M) que estava escondido.
+- **Closure construída uma vez por call** — V8 inline-cacheia, custo
+  amortizado abaixo do ruído de medição. O default ganha estritamente
+  (Map é mais rápido que scan linear acima de ~16 items; abaixo é
+  empate dentro de ~100ns).
+- **Smart-key adicional gratuito** — todo usuário smart-key (não só
+  matrix-positional) se beneficia da redução algorítmica.
+- AOT (C) duplicaria código e conformance; ganho cosmético sobre B
+  já-zero-cost-na-prática.
+
+**Implementação:**
+
+```ts
+// Helper top-level — O(N) construction, O(1) lookups:
+function buildKeyIndex(arr, identity): Map<string, number> {
+  const map = new Map();
+  for (let i = 0; i < arr.length; i++) {
+    const k = smartKeyOf(arr[i], identity);
+    if (k !== undefined && !map.has(k)) map.set(k, i);
+  }
+  return map;
+}
+
+// In applyArrayOps, after identity resolution:
+const isPositional = identity === POSITIONAL_IDENTITY;
+const baseMap = isPositional ? null : buildKeyIndex(base, identity);
+const findInBase: (key: string) => number = isPositional
+  ? (key) => {
+      const n = Number(key);
+      return Number.isInteger(n) && n >= 0 && n < base.length ? n : -1;
+    }
+  : (key) => baseMap!.get(key) ?? -1;
+
+// Mesma forma pra findInResult após Phase 3 (result mutated).
+```
+
+**3 hot paths convertidos:**
+
+1. Partição de smart-key moves (linha 176 → `findInBase`)
+2. Pass A da fase 1 (resolução de removes, linha 223 → `findInBase`)
+3. Fase 4 (nested updates, linha 314 → `findInResult` sobre `result`
+   pós-mutação)
+
+**1 caminho restante linear** (deliberado): fase 3 strict-collision
+check (linha 350). Só roda em strict mode, raro, e `result` já mutou
+entre fase 1 e fase 3 — rebuild de Map só pra strict check não
+compensa. Continua `indexOfSmartKey` linear.
+
+**Duplicate smart-keys:** o Map mantém o **primeiro** match (`!map.has(k)` antes de `set`), espelhando o comportamento de `indexOfSmartKey` que retorna o primeiro hit. `$assertCollection` impede duplicates estruturalmente quando ativada.
+
+**Validação:** suite 471/471 → 483/483 (12 casos R11 novos), zero
+regressão em tests pré-existentes.
+
+**Trade-off avaliado e descartado:** threshold por tamanho (só
+construir Map se `arr.length >= 16` pra evitar overhead em arrays
+pequenos). Análise empírica: overhead de Map em array de 10 items é
+~100-150ns (insignificante); ganho em arrays >50 items é mensurável;
+ganho em arrays >1000 é dramático. Complexidade adicional do
+threshold não compensa.
+
+**Validação empírica ([`PATCH-RESULTS.md`](../../json-myers-bench/results/PATCH-RESULTS.md)):**
+
+| Cenário | Tempo (mediana) | Lookups O(M+N) | O(M·N) seria |
+|---|---|---|---|
+| 100 users × 10 nested updates | 7.67 µs | 110 | 1.000 |
+| 1.000 users × 50 nested updates | 82.99 µs | 1.050 | 50.000 |
+| 10.000 users × 100 nested updates | 1.491 ms | 10.100 | 1.000.000 |
+
+**Speedup empírico é ~3-4×, não ~50×.** O rascunho original deste
+ADR confundiu **redução de complexidade** (real: lookup escalou de
+N·M para N+M, fator ~50× no número de comparações) com **redução de
+tempo total** (medido: ~3-4×). A diferença: lookup linear não era o
+trabalho dominante. Em `1000×50`, o tempo se distribui ~5% lookup,
+~95% recursão de `patchJson` em cada item nested. O Map elimina
+quase todo o lookup; sobra o resto, que continua igual.
+
+Olhando o escalonamento real (3 medições):
+- 100→1000 (10× M+N): 7.67µs → 82.99µs (~11× tempo)
+- 1000→10000 (10× M+N): 82.99µs → 1.491ms (~18× tempo)
+
+Confirma escalonamento **linear-ish** em M+N (o slight super-linear
+em 10k vem do pressure de GC e cache misses em alocações maiores).
+A tese **algorítmica** (O(M·N) → O(M+N) no lookup) está provada; o
+**impacto no tempo total** é menor do que o ADR original sugeria.
+
+Decisão continua correta — Map é mais simples de raciocinar,
+escalonamento previsível, todo speedup conta. Mas a narrativa de
+"~50× speedup" foi inflada. Honesto: **~3-4× speedup no tempo de
+aplicação real, com redução de complexidade na busca**.
+
+---
+
 ## Decisões em aberto / futuras
 
 Decisões que não tomamos ainda mas estão na fila:
@@ -1151,3 +1379,36 @@ D-030 adiou schema pra v4. Quando chegar, decisões: JSON Schema
 (verboso, standard) vs Zod (TS-first, runtime overhead) vs formato
 próprio (controle total, learning curve). **Status:** adiada pra
 quando v4.x começar.
+
+### O-009 — Especialização JIT-like de `applyArrayOps` por config
+
+Anderson propôs durante o design de D-035: especializar o
+`applyArrayOps` por combinação de configs ativas (strict, identity,
+assertCollection, …) pra eliminar branches no hot path. Três níveis
+viáveis: dispatch one-shot (já feito em D-035), AOT especializado (N
+versões físicas — duplica código + conformance × N), codegen runtime
+via `new Function` (quebra CSP/Workers — descartado).
+
+Análise empírica mostrou que **branches de feature flag custam
+sub-1ns por iteração** — ~3 ordens de magnitude abaixo do trabalho
+útil (scans, splices, recursão de `patchJson`). O verdadeiro
+gargalo eram os scans O(N) por chamada — resolvido por D-035 (Map
+lookup) com ganho mensurável.
+
+**Status:** sem evidência empírica de gargalo em branches que
+justifique duplicação de código + conformance. Reabrir se um bench
+mostrar `applyArrayOps` como hot-spot E os branches de flag como
+fração não-trivial do tempo.
+
+### O-010 — Auto-detect de `:index` em `diffJson`
+
+D-034 entregou apenas o lado do patcher — `diffJson` não infere
+matriz posicional automaticamente. Inferência seria possível
+heuristicamente (array retangular de arrays, item interno
+primitivo/homogêneo, shape estável entre A e B), mas heurística é
+frágil (`["foo", "bar"]` confundido com matriz 1×2 trivial). Em v3.x
+o gerador é o consumidor (StateMatrix etc) — declara `:index` no
+wire emitido.
+
+**Status:** adiada até demanda concreta. Caminho preferido quando
+chegar é via D-030 (schema) — explicit > inferred pra forma do doc.

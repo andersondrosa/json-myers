@@ -28,6 +28,7 @@ export {
   CollectionAssertionError,
   isCollectionAssertionError,
   DEFAULT_IDENTITY,
+  POSITIONAL_IDENTITY,
 } from "./types.js";
 
 export type {

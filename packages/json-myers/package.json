@@ -1,6 +1,6 @@
 {
   "name": "json-myers",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "JSON diff/patch — Myers algorithm with identity-aware semantics. Backed by an executable conformance suite (R1–R6 patch, RD1–RD4 diff).",
   "type": "module",
   "main": "./dist/index.cjs",

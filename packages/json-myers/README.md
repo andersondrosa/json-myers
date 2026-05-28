@@ -82,6 +82,13 @@ em vez de `update`.
 
 Essa fronteira é boa: **identidade exige declaração**. Não há mágica.
 
+> **Quarto caso — posicional reservado.** Para matrizes Nd, grids,
+> boards e qualquer container onde o **índice é a identidade**, o
+> patcher aceita `$identity: ":index"` no wire. Não é um quarto flavor
+> de fingerprint — é uma instrução pro patcher: "trate sibling keys
+> deste array como índices numéricos, recursivamente". Veja a seção
+> [`:index` — identidade reservada para arrays posicionais](#index--identidade-reservada-para-arrays-posicionais).
+
 ---
 
 ## O algoritmo — Myers sobre fingerprints
@@ -108,11 +115,12 @@ empiricamente em 86 cenários de teste, incluindo 72 fuzz seedados).
 
 ---
 
-## O wire format — dois markers
+## O wire format — markers e identidade reservada
 
-Diffs gerados por `json-myers` viajam como JSON normal. A única coisa
-que distingue um "valor de dado" de uma "instrução de patch" são dois
-markers reservados:
+Diffs gerados por `json-myers` viajam como JSON normal. O que distingue
+"valor de dado" de "instrução de patch" são markers reservados (`$ops`,
+`$identity`, `$assertCollection`, `$remove`) e um valor reservado de
+identity (`:index`).
 
 ### `$ops` — operações de array
 
@@ -151,6 +159,43 @@ O patcher resolve identity nesta ordem: `diff.$identity` →
 `PatchOptions.identity` → `"id"`. Cada array no documento pode ter
 sua própria convenção (`users[]` com `id`, `products[]` com `sku`,
 etc).
+
+#### `:index` — identidade reservada para arrays posicionais
+
+Matrizes Nd, grids, boards e qualquer container onde **a posição é a
+identidade** (não há `id`/`sku`/`key` natural) usam o valor reservado
+`":index"` — o prefixo `:` o distingue de qualquer field de objeto:
+
+```json
+{
+  "$ops": [],
+  "$identity": ":index",
+  "1": {
+    "$ops": [],
+    "$identity": ":index",
+    "2": 60
+  }
+}
+```
+
+Patch sobre `[[1,2,3],[4,5,6],[7,8,9]]` → resultado `[[1,2,3],[4,5,60],[7,8,9]]`.
+Sibling keys numéricas (`"1"`, `"2"`) são índices diretos no array
+(`result[1]`, `result[1][2]`), não lookups por campo. Recursão é
+genuína — 3D usa três níveis de `$identity: ":index"`, Nd usa N.
+
+Regras posicionais:
+
+- Sibling keys parsadas como inteiros não-negativos dentro do range.
+  Não-inteiros, negativos, fracionários ou fora de range degradam como
+  smart-key-miss: silent skip em normal, `KEY_NOT_FOUND` em strict.
+- `$ops` posicional (`{type:"add", index, item}` etc) opera inalterado
+  — composição livre com edição celular.
+- `$assertCollection` é silenciada — matriz não é collection
+  homogênea de objetos com identity declarada.
+
+Em v3.x, `:index` é **declarado pelo emissor** (StateMatrix etc) — não
+inferido automaticamente pelo `diffJson`. Auto-detect heurístico fica
+adiado pra evidência concreta de demanda.
 
 ### `$assertCollection` — contrato de collection homogênea
 
@@ -246,8 +291,8 @@ import { patchJson } from "json-myers/patch";
 A versão `/patch` exporta tudo o que o lado de aplicação precisa:
 `patchJson`, `applyArrayOps`, todas as classes de erro (com type
 guards), todos os tipos relevantes (`Op`, `OpsDiff`, `PatchOptions`,
-etc) e `DEFAULT_IDENTITY`. **Diff e geração não estão lá** — pra
-isso, use o entry principal.
+etc) e as constantes `DEFAULT_IDENTITY` / `POSITIONAL_IDENTITY`.
+**Diff e geração não estão lá** — pra isso, use o entry principal.
 
 ### Diff
 
@@ -422,8 +467,9 @@ import type {
   Edit, EqFn,
 } from "json-myers";
 
-import { DEFAULT_IDENTITY } from "json-myers";
+import { DEFAULT_IDENTITY, POSITIONAL_IDENTITY } from "json-myers";
 // DEFAULT_IDENTITY === "id"
+// POSITIONAL_IDENTITY === ":index"  — matrizes Nd, grids, posicional
 ```
 
 ---
@@ -478,6 +524,8 @@ hashValue({a:1,b:2}) === hashValue({b:2,a:1})  // sort interno de keys
 - Arrays são **coleções de objetos com identidade declarada** (`id`/`key`).
 - Você precisa de **patches mínimos** que preservem identidade através de
   reordenação.
+- Você trabalha com **matrizes Nd / grids / boards** onde a posição é a
+  identidade — `:index` recursa em qualquer profundidade sem heurística.
 - O sistema é determinístico — diff/patch precisa ser exato e estável.
 - Você quer **content-addressable** (mesmos documentos → mesmo Artifact).
 - Você precisa de **modo strict** para detectar divergência entre patch e
@@ -588,7 +636,7 @@ Relatório com tabelas por cenário, gzip, ops counts, tempo:
   camadas, fluxos de `diff`/`patch`, implementação do Myers,
   complexidade, mutual recursion via ESM, performance
 - [`docs/DECISIONS.md`](./docs/DECISIONS.md) — ADRs de cada decisão de design
-  (31 tomadas, 6 em aberto) com contexto + opções consideradas + razão
+  (35 tomadas, 8 em aberto) com contexto + opções consideradas + razão
 - [`conformance/README.md`](./conformance/README.md) — spec
-  executável (R1–R8 para `patch`, RD1–RD4 para `diff`); JSON publicado
+  executável (R1–R11 para `patch`, RD1–RD4 para `diff`); JSON publicado
   no npm pra consumo por outras implementações

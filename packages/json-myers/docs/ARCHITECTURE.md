@@ -24,7 +24,7 @@ packages/json-myers/
 │   ├── applyArrayOps.ts     ← Aplicação de $ops (3 fases)
 │   └── *.test.ts            ← Unit tests co-localizados (vitest)
 ├── tests/
-│   ├── patch.conformance.test.ts        ← Runner spec R1–R10 (95 testes)
+│   ├── patch.conformance.test.ts        ← Runner spec R1–R11 (107 testes)
 │   ├── diff.conformance.test.ts         ← Runner spec RD1–RD4 (64 testes)
 │   └── myers.git-equivalence.test.ts    ← Equivalência com git diff (86 testes)
 ├── conformance/
@@ -75,7 +75,8 @@ diff não vaze no bundle de quem só importa `/patch`.
 │                             │ │                                 │
 │  diffArray ←→ diffObject    │ │  applyArrayOps (3 fases)        │
 │  (mutual recursion via      │ │  + nested-update por smart-key  │
-│   diffJsonInner)            │ │                                 │
+│   diffJsonInner)            │ │  + dispatch one-shot (smart-key │
+│                             │ │    Map vs :index posicional)    │
 └──────────────┬──────────────┘ └─────────────────────────────────┘
                │
 ┌──────────────┴──────────────┐
@@ -244,7 +245,8 @@ via `NO_CHANGE`; reorder + mudança → apenas o delta.
 
 ### Fluxo de `applyArrayOps(base, opsDiff, options)`
 
-Aplicação em **0 (resolve identity) → 0.5 (assert) → 3 fases + 1 post**:
+Aplicação em **0 (resolve identity) → 0.5 (assert) → 0.75 (dispatch
+one-shot + baseMap) → 3 fases + 1 post**:
 
 ```
        base (array), opsDiff.$ops = [Op, Op, Op, ...]
@@ -255,15 +257,33 @@ Aplicação em **0 (resolve identity) → 0.5 (assert) → 3 fases + 1 post**:
    │  diff.$identity          │
    │  → options.identity      │
    │  → "id" (default)        │
+   │  isPositional =          │
+   │    identity === ":index" │
    └──────────┬───────────────┘
               │
               ▼
    ┌──────────────────────────┐
    │ FASE 0.5 — Collection    │
    │  assertion (se $assert-  │
-   │  Collection: true).      │
-   │  Throws CollectionAsse-  │
-   │  rtionError em violação. │
+   │  Collection: true E NÃO  │
+   │  posicional). Throws     │
+   │  CollectionAssertionError│
+   │  em violação. Silenciada │
+   │  quando :index.          │
+   └──────────┬───────────────┘
+              │
+              ▼
+   ┌──────────────────────────┐
+   │ FASE 0.75 — Dispatch     │
+   │  one-shot:               │
+   │  • baseMap = isPositional│
+   │    ? null                │
+   │    : buildKeyIndex(base) │
+   │  • findInBase = closure  │
+   │    (positional inline OU │
+   │     baseMap.get())       │
+   │  Construído UMA vez —    │
+   │  zero overhead per-op.   │
    └──────────┬───────────────┘
               │
               ▼
@@ -272,18 +292,21 @@ Aplicação em **0 (resolve identity) → 0.5 (assert) → 3 fases + 1 post**:
    │  - removes               │
    │  - positional moves      │
    │  - adds                  │
-   │ (smart-key moves são     │
-   │  pre-expandidos em       │
-   │  remove + add).          │
+   │  (smart-key moves são    │
+   │   pre-expandidos em      │
+   │   remove + add; lookup   │
+   │   via findInBase).       │
    └──────────┬───────────────┘
               │
               ▼
    ┌──────────────────────────┐
    │ FASE 1 — Removes         │
    │  ordenados descendente   │
-   │  por índice resolvido.   │
-   │  Itens removidos por     │
-   │  smart-key vão pro       │
+   │  por índice resolvido    │
+   │  (smart-key via          │
+   │  findInBase — O(1) via   │
+   │  Map). Itens removidos   │
+   │  por smart-key vão pro   │
    │  removedByKey cache.     │
    └──────────┬───────────────┘
               │
@@ -301,19 +324,30 @@ Aplicação em **0 (resolve identity) → 0.5 (assert) → 3 fases + 1 post**:
    │  Smart-key: pega do      │
    │  removedByKey OU         │
    │  buildFromSeed (lookup   │
-   │  sibling no diff).       │
+   │  sibling no diff). Strict│
+   │  collision check via     │
+   │  indexOfSmartKey linear  │
+   │  (result já mutou; raro).│
    └──────────┬───────────────┘
               │
               ▼
    ┌──────────────────────────┐
    │ FASE 4 — Nested updates  │
-   │  por smart-key: pra cada │
-   │  chave-sibling do $ops   │
-   │  no diff, lookup smart-  │
-   │  key no result, patchJson│
-   │  recursivo no item.      │
+   │  • resultMap rebuilt     │
+   │    sobre result mutado   │
+   │  • findInResult closure  │
+   │    (positional inline OU │
+   │     resultMap.get())     │
+   │  Pra cada sibling key    │
+   │  não-marker: lookup O(1),│
+   │  patchJson recursivo no  │
+   │  item.                   │
    └──────────────────────────┘
 ```
+
+**Otimização chave — Map-based lookup ([D-035](./DECISIONS.md#d-035--map-based-lookup-pra-eliminar-onm-nos-hot-paths)):** as 3 chamadas hot (partição de moves, Pass A de removes, fase 4 inteira) que antes faziam scan linear O(N) por sibling/op agora consultam um Map pré-computado. Em array de 1000 items com 50 nested updates: 50.000 comparações → 1.050. Aplicado universalmente em smart-key (não é opt-in); o caminho `:index` pula o Map (usa parse numérico direto).
+
+**Princípio opt-in zero-cost (D-035):** o caminho `:index` não impõe overhead no caminho default. O despacho one-shot é construído via closure no escopo do `applyArrayOps` — V8 inline-cacheia e a função idiomática para smart-key resolve `Map<string, number>.get` direto.
 
 Em modo **strict**, cada fase tem checks adicionais:
 
@@ -325,6 +359,7 @@ Em modo **strict**, cada fase tem checks adicionais:
 | 2 (moves) | índice fora de range | `INDEX_OUT_OF_RANGE` |
 | 3 (adds) | smart-key já existe | `KEY_ALREADY_EXISTS` |
 | 4 (nested) | smart-key não bate item | `KEY_NOT_FOUND` |
+| 4 (nested, `:index`) | sibling não-inteiro / fora de range | `KEY_NOT_FOUND` |
 
 ---
 
@@ -717,6 +752,51 @@ diffJson(a, b, { identity: "code" });
 // Cada array-diff carrega $identity: "code"
 ```
 
+### `:index` — identidade reservada para arrays posicionais
+
+`POSITIONAL_IDENTITY = ":index"` é um valor reservado no espaço de
+identity (prefixo `:` o distingue de fields de objeto). Quando um
+array-diff declara `$identity: ":index"`, o patcher:
+
+1. **Sibling keys de nested update viram índices numéricos.** Em
+   `applyArrayOps`, o lookup `findInResult(key)` parseia
+   `Number(key)` em vez de varrer o array procurando matching field.
+   Não-inteiros, negativos, fracionários ou fora de range degradam
+   para `-1` (mesmo "não achou" do smart-key miss).
+2. **`$assertCollection` é silenciada.** Matriz posicional não é
+   collection homogênea com identity declarada; combiná-las seria
+   estruturalmente incoerente — o patcher tolera em vez de lançar.
+3. **`$ops` posicional opera inalterado.** Não há interação com a
+   identidade; `{type:"add", index, item}` etc. continuam funcionando
+   no nível externo de uma matriz.
+4. **Smart-key ops dentro de array `:index` degradam graciosamente.**
+   `{type:"add", key:"X"}` num array posicional faz `lookup("X")`
+   → `Number("X") = NaN` → -1 → silent skip / `KEY_NOT_FOUND` em
+   strict. Não recomendado, mas inerte.
+
+Escopo da v3.x: apenas o patcher. O `diffJson` **não emite**
+`:index` automaticamente — o gerador é o consumidor (StateMatrix
+etc), que declara no wire. Heurística de auto-detect ficaria frágil
+(`["foo", "bar"]` confundido com matriz 1×2). Veja [D-034](./DECISIONS.md#d-034--positional_identity-index-para-matrizes-nd).
+
+Exemplo de wire (matriz 2D, edição de uma célula):
+
+```jsonc
+{
+  "$ops": [],
+  "$identity": ":index",
+  "1": {
+    "$ops": [],
+    "$identity": ":index",
+    "2": 60
+  }
+}
+// matrix[1][2] = 60
+```
+
+Recursão Nd: repete a estrutura — 3D usa 3 níveis, Nd usa N. Sem
+regra nova.
+
 ---
 
 ## `$assertCollection` — contrato de collection homogênea
@@ -833,15 +913,16 @@ StrictViolationError {
 
 Duas suites de spec executável em `conformance/`:
 
-### `json-merge-conformance.json` — aplicação (R1–R10)
+### `json-merge-conformance.json` — aplicação (R1–R11)
 
 Casos `(base, patch, expected | throws | strict_throws | collection_throws)`
 testando `patchJson`. Casos com `strict_throws` rodam em ambos os
 modos; casos com `collection_throws` validam o erro estrutural
 (`CollectionAssertionError`).
 
-Status atual: **95/95 testes** (84 cases + 11 cases R9/R10 que cobrem
-identity wire e collection assertion).
+Status atual: **107/107 testes** (84 cases base + 11 cases R9/R10 de
+identity wire e collection assertion + 10 cases R11 de matrix-positional
+com 2 strict double-mode).
 
 ### `json-reorder-conformance.json` — geração (RD1–RD4)
 
@@ -874,9 +955,25 @@ Status: **86/86**.
 | `myers(strings, 1000x1000, D=100)` | ~10 ms |
 | `diffJson(small JSON)` | ~10–50 µs |
 | `patchJson(small JSON)` | ~5–20 µs |
+| `patchJson(matriz 1000×1000, 1 cell edit)` | ~2.5 µs |
+| `patchJson(1000 users, 50 nested updates)` | ~83 µs |
+| `patchJson(10.000 users, 100 nested updates)` | ~1.5 ms |
+| `patchJson(strict, 1000×50 nested)` | ~82 µs (= normal) |
 
-A suite completa (328 testes, incluindo 72 invocações de `git diff`
-spawn) roda em ~600 ms.
+**Ganho de Map-based lookup (D-035):** smart-key nested update em
+array com `M` items e `N` siblings: lookup era O(M·N), agora é
+O(M+N). **Em tempo total**, o speedup empírico é **~3-4×** (não 50×
+como a redução de complexidade sozinha sugeriria) — porque o lookup
+linear era ~5% do trabalho, os outros ~95% são `patchJson` recursivo
+em cada item, que continua igual. Pra arrays pequenos (<16 items),
+Map adiciona overhead absoluto de ~100ns (insignificante). Strict
+mode tem **zero overhead** no caminho feliz — checks só rodam em
+condições anormais. Detalhes empíricos em
+[`PATCH-RESULTS.md`](../../json-myers-bench/results/PATCH-RESULTS.md);
+análise em [D-035](./DECISIONS.md#d-035--map-based-lookup-pra-eliminar-onm-nos-hot-paths).
+
+A suite completa (483 testes, incluindo 72 invocações de `git diff`
+spawn) roda em ~700 ms.
 
 ---
 
@@ -956,7 +1053,7 @@ dist/
 
 ## Ver também
 
-- [`PHILOSOPHY.md`](../PHILOSOPHY.md) — visão, tese, conceitos, API,
+- [`README.md`](../README.md) — visão, tese, conceitos, API,
   garantias
 - [`DECISIONS.md`](./DECISIONS.md) — registro de cada decisão tomada
   e rejeitada, com contexto e razão
