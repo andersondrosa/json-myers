@@ -1,6 +1,6 @@
 {
   "name": "json-myers-bench",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Diff-generation benchmark — json-myers vs RFC 6902 / RFC 7396 / jsondiffpatch.",
   "private": true,
   "type": "module",
